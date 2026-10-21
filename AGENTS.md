@@ -1,117 +1,75 @@
-# AGENTS.md — Sprint 1: UI Absensi Praktikum (3 Agents)
+# AGENTS.md — Sprint 1: UI Absensi Praktikum
 
 ## Tujuan sprint
 
-Bangun prototipe aplikasi manajemen absensi praktikum menggunakan Expo + React Native + TypeScript + Expo Router. Fokus sprint ini adalah UI, navigasi, dan interaksi yang responsif. Gunakan dummy data dan state lokal selama aplikasi berjalan; jangan menambahkan backend atau database.
+Bangun prototipe aplikasi manajemen absensi praktikum menggunakan Expo + React Native + TypeScript + Expo Router. Fokus sprint ini adalah antarmuka, navigasi, dan interaksi yang responsif. Gunakan dummy data dan state lokal selama aplikasi berjalan; jangan menambahkan backend atau database.
 
-Alur demo wajib dalam satu runtime aplikasi:
+Alur demo yang wajib dapat diperagakan:
 
-1. Pengguna memilih identitas asisten.
-2. Asisten membuka sesi praktikum.
-3. Pengguna berganti identitas ke praktikan.
-4. Praktikan melakukan presensi.
-5. Pengguna berganti kembali ke identitas asisten.
-6. Asisten melihat rekap beserta waktu presensi, lalu menutup sesi.
+1. Asisten memilih sesi dan membuka sesi.
+2. Praktikan memilih sesi yang sama dan melakukan presensi.
+3. Asisten membuka rekap dan melihat presensi beserta waktunya.
+4. Asisten menutup sesi.
 
-Karena belum ada backend, data tidak perlu bertahan setelah aplikasi ditutup atau dimuat ulang. Namun, perubahan harus dibagikan melalui state/context yang sama selama aplikasi berjalan agar alur demo lintas peran dapat diperagakan.
+Karena tidak ada backend, semua perubahan boleh hilang ketika aplikasi dimuat ulang. Namun, selama satu runtime aplikasi, gunakan state bersama agar alur demo di atas benar-benar terlihat lintas peran. Tidak perlu membuat sinkronisasi atau persistensi antarperangkat.
 
-## Aturan umum untuk semua agent
+## Aturan kerja untuk kedua agent
 
-- **Patuhi kepemilikan file.** Jangan mengubah file yang dimiliki agent lain, walaupun hanya satu baris.
-- Jangan mengubah `package.json`, lockfile, konfigurasi Expo, atau konfigurasi TypeScript untuk pekerjaan UI biasa. Perubahan dependency/konfigurasi harus disepakati terlebih dahulu; Agent 1 yang menerapkannya.
-- Jangan membuat backend, database, API server, autentikasi sungguhan, atau persistensi yang tidak diminta.
-- Gunakan TypeScript, komponen fungsional, Expo Router, Flexbox, dan pola styling yang sudah ada di proyek. Jangan menambahkan library UI baru tanpa persetujuan.
-- Gunakan `Modal` dari React Native untuk konfirmasi/informasi pendukung jika diperlukan dan belum ada Bottom Sheet yang terpasang.
-- Semua tombol harus memiliki aksi yang jelas. Tangani loading/disabled state yang relevan, feedback sukses/gagal, empty state, dan tampilan sesi yang belum dibuka atau sudah ditutup.
-- Data identitas, sesi, dan presensi harus diambil dari `useAttendance()`; jangan membuat data/context/store lokal tandingan untuk informasi yang sama.
-- Agent fitur boleh membuat komponen di dalam folder miliknya sendiri, tetapi tidak boleh mengubah shared component atau kontrak data.
-- Hindari `any`, duplikasi model, refactor yang tidak terkait, dan file dengan tanggung jawab ganda.
-- Sebelum menyelesaikan tugas, jalankan pemeriksaan yang tersedia (misalnya `npx tsc --noEmit` dan/atau lint jika script-nya ada). Laporkan command yang benar-benar dijalankan dan masalah yang masih ada.
+- Jangan mengubah file di luar daftar kepemilikan yang diberikan kepada agent masing-masing.
+- Jangan mengedit file yang dimiliki agent lain, meskipun perubahan terasa kecil. Jika butuh perubahan kontrak, ajukan permintaan terlebih dahulu dan tunggu pemilik file yang mengubahnya.
+- Jangan menambahkan dependency baru kecuali benar-benar diperlukan dan telah disepakati. Gunakan `Modal` dari React Native untuk konfirmasi/dukungan interaksi jika tidak ada Bottom Sheet yang sudah terpasang.
+- Jangan mengubah `package.json`, `package-lock.json`, konfigurasi Expo, atau konfigurasi TypeScript untuk pekerjaan UI biasa. Jika perubahan konfigurasi diperlukan, hanya Agent 1 yang boleh melakukannya setelah memberi tahu Agent 2.
+- Gunakan TypeScript, komponen fungsional, dan `StyleSheet`/pola styling yang sudah digunakan proyek. Gunakan Flexbox untuk tata letak dan pastikan tampilan dapat digunakan pada layar sempit maupun lebar.
+- Jangan mengandalkan data hardcoded di dalam layar jika data tersebut seharusnya berasal dari context. Data identitas, sesi, dan presensi memakai kontrak bersama di bawah.
+- Semua tombol harus memiliki aksi yang nyata. Sertakan loading/disabled state saat relevan, pesan keberhasilan/kegagalan yang mudah dipahami, serta empty state.
+- Hindari `any`, duplikasi model data, penambahan library UI baru, dan perubahan besar yang tidak terkait sprint.
+- Sebelum menyelesaikan pekerjaan, jalankan pemeriksaan yang tersedia seperti `npx tsc --noEmit` dan/atau lint jika skripnya tersedia. Laporkan command yang dijalankan dan masalah yang belum terselesaikan; jangan mengklaim lolos jika belum dijalankan.
 
-## Pembagian agent dan kepemilikan file
+## Pembagian kepemilikan file (wajib dipatuhi)
 
-Pembagian ini sengaja memakai tiga wilayah eksklusif: fondasi/shared state, UI asisten, dan UI praktikan. Jangan memindahkan tanggung jawab file tanpa kesepakatan eksplisit.
+### Agent 1 — Fondasi aplikasi, state bersama, dan alur asisten
 
-### Agent 1 — Fondasi, navigasi root, kontrak data, dan state bersama
-
-**Hanya Agent 1 yang boleh membuat atau mengubah file berikut:**
+**Agent 1 satu-satunya pemilik file berikut:**
 
 - `src/app/_layout.tsx`
 - `src/app/index.tsx`
-- `src/components/shared/**`
+- `src/app/asisten/**`
+- `src/components/asisten/**`
 - `src/types/attendance.ts`
 - `src/data/mockData.ts`
 - `src/context/AttendanceContext.tsx`
 
-Agent 1 bertanggung jawab atas:
+Tugas Agent 1:
 
-1. Memeriksa struktur proyek yang ada, lalu menyiapkan folder/file yang tercantum di atas jika belum ada.
-2. Mendefinisikan tipe data, dummy data, dan `AttendanceContext` yang menjadi satu-satunya sumber state selama aplikasi berjalan.
-3. Membungkus root navigator dengan `AttendanceProvider` pada `_layout.tsx`.
-4. Membangun halaman awal `src/app/index.tsx` untuk memilih peran dan identitas dummy melalui form/pilihan sederhana. Setelah dipilih, arahkan pengguna ke area sesuai peran.
-5. Menyediakan fungsi ganti pengguna/peran agar alur demo dapat berpindah dari asisten ke praktikan lalu kembali ke asisten tanpa kehilangan state sesi/presensi.
-6. Jika perlu, membuat komponen reusable generik di `src/components/shared/**` (misalnya status badge, empty state, atau komponen informasi sesi). Komponen shared tidak boleh berisi alur khusus asisten atau praktikan.
-7. Menyampaikan kontrak API yang siap dipakai kepada Agent 2 dan Agent 3 sebelum mereka mengintegrasikan UI.
+1. Buat kontrak tipe, dummy data, dan provider state bersama terlebih dahulu agar Agent 2 dapat mengembangkan layar praktikan terhadap API yang stabil.
+2. Bungkus navigator root dengan `AttendanceProvider` di `_layout.tsx`.
+3. Buat halaman awal `src/app/index.tsx` untuk memilih peran dan identitas pengguna menggunakan pilihan/form sederhana. Sediakan identitas dummy untuk asisten dan praktikan; setelah dipilih, navigasikan pengguna ke area sesuai perannya.
+4. Implementasikan alur asisten: melihat jadwal/detail sesi, membuka sesi, melihat rekap presensi dan waktu kehadiran, lalu menutup sesi.
+5. Pastikan perubahan status sesi terlihat pada layar asisten maupun praktikan melalui context yang sama.
+6. Jangan mengubah file di dalam `src/app/praktikan/**` atau `src/components/praktikan/**`; Agent 2 memilikinya.
 
-**Agent 1 tidak boleh mengubah:**
+### Agent 2 — Alur praktikan
 
-- `src/app/asisten/**`
-- `src/components/asisten/**`
-- `src/app/praktikan/**`
-- `src/components/praktikan/**`
-
-### Agent 2 — UI dan alur asisten
-
-**Hanya Agent 2 yang boleh membuat atau mengubah file berikut:**
-
-- `src/app/asisten/**`
-- `src/components/asisten/**`
-
-Agent 2 bertanggung jawab atas:
-
-1. Membuat daftar jadwal/sesi yang relevan untuk asisten, termasuk nama praktikum, kelas, tanggal, waktu, ruangan (jika tersedia), dan status.
-2. Membuat halaman detail sesi dan tindakan membuka sesi yang belum dibuka serta menutup sesi yang sedang terbuka.
-3. Menampilkan status terbaru sesi pada UI berdasarkan state bersama.
-4. Membuat rekap sederhana berupa daftar praktikan yang sudah presensi beserta waktu kehadirannya. Sertakan empty state jika belum ada presensi.
-5. Menambahkan konfirmasi menggunakan `Modal` bila tindakan membuka/menutup sesi perlu dikonfirmasi.
-6. Menyediakan akses untuk mengganti pengguna/peran melalui navigasi ke `/` tanpa menghapus state sesi/presensi.
-7. Menggunakan fungsi dan data dari `useAttendance()`; jangan membuat daftar kehadiran atau status sesi yang hanya hidup di state layar.
-
-**Agent 2 tidak boleh mengubah:**
-
-- File milik Agent 1.
-- `src/app/praktikan/**`
-- `src/components/praktikan/**`
-
-### Agent 3 — UI dan alur praktikan
-
-**Hanya Agent 3 yang boleh membuat atau mengubah file berikut:**
+**Agent 2 satu-satunya pemilik file berikut:**
 
 - `src/app/praktikan/**`
 - `src/components/praktikan/**`
 
-Agent 3 bertanggung jawab atas:
+Tugas Agent 2:
 
-1. Membuat daftar jadwal/sesi praktikan dan halaman detailnya.
-2. Menampilkan nama praktikum, kelas, tanggal, waktu, ruangan (jika tersedia), nama asisten (jika tersedia), dan status sesi.
-3. Menampilkan tindakan presensi yang aktif hanya ketika sesi berstatus `open` dan praktikan belum presensi pada sesi itu.
-4. Setelah presensi berhasil, menampilkan feedback yang jelas serta waktu presensi.
-5. Mencegah presensi ganda dengan memanggil fungsi `recordAttendance()` dari context. Tampilkan pesan yang sesuai jika sesi belum terbuka atau presensi sudah tercatat.
-6. Membuat riwayat presensi pribadi berdasarkan identitas praktikan yang sedang dipilih, termasuk empty state jika belum ada catatan.
-7. Menyediakan akses untuk mengganti pengguna/peran melalui navigasi ke `/` tanpa menghapus state sesi/presensi.
-8. Menggunakan fungsi dan data dari `useAttendance()`; jangan membuat daftar sesi/riwayat palsu yang terpisah dari state bersama.
+1. Bangun layar jadwal/daftar sesi praktikan, detail sesi, tindakan presensi, dan riwayat presensi pribadi.
+2. Ambil data dan lakukan perubahan melalui `useAttendance()` dari `src/context/AttendanceContext.tsx`. Jangan membuat context, state store, tipe, atau dummy data tandingan.
+3. Tampilkan informasi nama praktikum, kelas, tanggal, jam, lokasi (jika tersedia), nama asisten (jika tersedia), dan status sesi.
+4. Tombol presensi hanya aktif jika sesi berstatus `open` dan pengguna belum tercatat hadir pada sesi tersebut. Setelah berhasil, tampilkan waktu kehadiran dan umpan balik yang jelas.
+5. Jika sesi belum dibuka atau sudah ditutup, jelaskan statusnya dan nonaktifkan presensi. Jika sudah presensi, tampilkan status “sudah presensi” dan cegah presensi kedua.
+6. Buat halaman riwayat yang menampilkan catatan kehadiran milik praktikan yang sedang dipilih, serta empty state ketika belum ada catatan.
+7. Jangan mengubah `_layout.tsx`, `src/app/index.tsx`, `src/app/asisten/**`, `src/types/attendance.ts`, `src/data/mockData.ts`, atau `src/context/AttendanceContext.tsx`.
 
-**Agent 3 tidak boleh mengubah:**
+## Kontrak integrasi yang disepakati
 
-- File milik Agent 1.
-- `src/app/asisten/**`
-- `src/components/asisten/**`
+Agent 1 harus mengimplementasikan API dengan nama dan bentuk berikut. Agent 2 membaca dan menggunakan kontrak ini, bukan mendefinisikan ulang.
 
-## Kontrak integrasi wajib
-
-Kontrak di bawah adalah milik Agent 1. Agent 2 dan Agent 3 hanya membaca dan menggunakan kontrak ini. Jangan mengganti nama field atau bentuk fungsi tanpa meminta persetujuan Agent 1 terlebih dahulu.
-
-### Tipe — `src/types/attendance.ts`
+### Tipe (`src/types/attendance.ts`)
 
 Definisikan sekurangnya tipe berikut:
 
@@ -131,8 +89,8 @@ export type PracticumSession = {
   id: string;
   practicalName: string;
   className: string;
-  date: string;
-  startTime: string;
+  date: string;       // ISO date atau format tanggal yang disepakati
+  startTime: string;  // format jam yang konsisten, mis. "09:00"
   endTime: string;
   room?: string;
   assistantName?: string;
@@ -144,15 +102,15 @@ export type AttendanceRecord = {
   sessionId: string;
   studentId: string;
   studentName: string;
-  checkedInAt: string;
+  checkedInAt: string; // ISO timestamp
 };
 ```
 
-Field `date` harus konsisten (disarankan ISO date seperti `2026-10-21`); `checkedInAt` adalah ISO timestamp. Agent 1 boleh menambahkan field, tetapi jangan menghapus atau mengganti field kontrak di atas.
+Model boleh diperluas oleh Agent 1 jika dibutuhkan, tetapi nama field di atas tidak boleh diubah atau dihapus tanpa persetujuan kedua agent.
 
-### Context — `src/context/AttendanceContext.tsx`
+### API context (`src/context/AttendanceContext.tsx`)
 
-Sediakan `AttendanceProvider` dan hook `useAttendance()`. API minimum:
+Sediakan `AttendanceProvider` dan hook `useAttendance()`. Hook sekurangnya mengekspos:
 
 ```ts
 {
@@ -167,89 +125,65 @@ Sediakan `AttendanceProvider` dan hook `useAttendance()`. API minimum:
   recordAttendance: (
     sessionId: string,
     studentId: string
-  ) =>
-    | { ok: true; record: AttendanceRecord }
-    | {
-        ok: false;
-        reason: 'session-not-open' | 'already-recorded' | 'user-not-found';
-      };
+  ) => { ok: true; record: AttendanceRecord } |
+     { ok: false; reason: 'session-not-open' | 'already-recorded' | 'user-not-found' };
   getAttendanceForSession: (sessionId: string) => AttendanceRecord[];
   getAttendanceForStudent: (studentId: string) => AttendanceRecord[];
 }
 ```
 
-Ketentuan implementasi:
+Implementasi boleh menyimpan tambahan state internal, tetapi Agent 2 hanya mengandalkan kontrak ini. `recordAttendance` wajib memeriksa bahwa sesi terbuka, identitas praktikan ada, dan praktikan belum melakukan presensi untuk sesi itu. Simpan timestamp aktual saat tindakan dilakukan.
 
-- `openSession()` mengubah status sesi menjadi `open`.
-- `closeSession()` mengubah status sesi menjadi `closed`.
-- `recordAttendance()` wajib memeriksa sesi ada dan sedang terbuka, identitas praktikan valid, serta tidak ada catatan presensi sebelumnya untuk pasangan `sessionId` + `studentId` tersebut.
-- Jika berhasil, simpan timestamp aktual dan kembalikan record yang baru dibuat.
-- Perubahan dilakukan secara immutable agar React merender ulang UI yang memakai context.
-- Fungsi selector mengembalikan daftar catatan berdasarkan sesi atau praktikan.
-- `AttendanceProvider` harus berada di root agar state tidak hilang ketika pengguna berpindah route.
+### Dummy data (`src/data/mockData.ts`)
 
-### Dummy data — `src/data/mockData.ts`
+- Sediakan beberapa sesi dengan status awal yang bervariasi (`upcoming`, `open`, `closed`) agar semua state UI bisa diuji.
+- Sediakan beberapa identitas asisten dan praktikan, termasuk kelas/NIM dummy yang konsisten.
+- Data awal presensi boleh berisi beberapa catatan contoh, tetapi minimal ada sesi yang masih kosong.
+- Data harus fiktif; jangan memasukkan data pribadi nyata.
 
-- Sediakan beberapa identitas asisten dan praktikan yang sepenuhnya fiktif.
-- Sediakan beberapa sesi dengan status awal bervariasi: `upcoming`, `open`, dan `closed`.
-- Sediakan sedikit data presensi contoh dan setidaknya satu sesi tanpa presensi.
-- Pastikan setidaknya ada satu sesi yang dapat digunakan untuk demo alur buka sesi → presensi → rekap → tutup sesi.
-- Jangan menyimpan state runtime yang bisa berubah di dalam file dummy data; file ini hanya berisi data awal.
+### Navigasi yang dipakai
 
-## Konvensi navigasi
+- `/` — pemilihan peran dan identitas (Agent 1).
+- `/asisten` — daftar jadwal/sesi asisten (Agent 1).
+- `/asisten/[sessionId]` — detail, tindakan buka/tutup sesi, dan akses rekap (Agent 1).
+- `/asisten/rekap/[sessionId]` — rekap sesi jika dibuat sebagai halaman terpisah (Agent 1); atau rekap berupa `Modal` pada detail sesi.
+- `/praktikan` — daftar jadwal/sesi praktikan (Agent 2).
+- `/praktikan/[sessionId]` — detail dan presensi (Agent 2).
+- `/praktikan/riwayat` — riwayat presensi pribadi (Agent 2).
 
-Pakai Expo Router dengan path berikut, kecuali struktur template yang sudah ada mengharuskan penyesuaian kecil. Jika perlu penyesuaian, sepakati sebelum mengubah kontrak navigasi.
+Gunakan Expo Router untuk navigasi. Jika rute belum tersedia saat agent sedang mengembangkan bagiannya, tetap gunakan path yang didefinisikan di atas.
 
-- `/` — pemilihan peran/identitas, dimiliki Agent 1.
-- `/asisten` — daftar jadwal/sesi asisten, dimiliki Agent 2.
-- `/asisten/[sessionId]` — detail sesi dan kontrol buka/tutup, dimiliki Agent 2.
-- `/asisten/rekap/[sessionId]` — rekap sesi jika dibuat sebagai halaman terpisah, dimiliki Agent 2; alternatifnya rekap boleh menggunakan `Modal` di detail sesi.
-- `/praktikan` — daftar jadwal/sesi praktikan, dimiliki Agent 3.
-- `/praktikan/[sessionId]` — detail dan presensi, dimiliki Agent 3.
-- `/praktikan/riwayat` — riwayat presensi pribadi, dimiliki Agent 3.
+## Kriteria selesai per agent
 
-Semua halaman fitur harus memiliki cara yang jelas untuk kembali ke daftar sebelumnya dan/atau mengganti identitas ke `/`. Perpindahan route tidak boleh membuat ulang provider state.
+### Agent 1
 
-## Urutan kerja agar minim konflik
+- [ ] Halaman awal memungkinkan pengguna memilih peran dan identitas dummy.
+- [ ] Root navigator dibungkus `AttendanceProvider` dan seluruh rute terkait dapat dibuka.
+- [ ] Asisten dapat melihat daftar/detail jadwal.
+- [ ] Asisten dapat membuka sesi dan status `open` muncul di UI.
+- [ ] Asisten dapat melihat daftar presensi beserta waktu, termasuk empty state.
+- [ ] Asisten dapat menutup sesi dan UI menunjukkan status `closed`.
+- [ ] API context dan model mengikuti kontrak sehingga Agent 2 dapat menggunakannya.
 
-1. **Agent 1 mulai lebih dahulu.** Buat tipe, dummy data, dan context berdasarkan kontrak di dokumen ini. Buat root layout serta halaman pemilihan identitas. Commit pekerjaan fondasi dengan pesan commit yang jelas.
-2. Agent 1 mengumumkan bahwa kontrak API sudah stabil dan memberi tahu Agent 2 serta Agent 3 commit mana yang harus mereka gunakan.
-3. **Agent 2 dan Agent 3 bekerja secara paralel** pada folder masing-masing setelah commit fondasi tersedia. Mereka tidak mengubah file bersama atau folder fitur agent lain.
-4. Jika Agent 2/3 membutuhkan API tambahan, ajukan permintaan singkat kepada Agent 1. Agent 1 mengubah file bersama dan membuat commit terpisah; kedua agent fitur mengambil commit tersebut. Jangan membuat workaround dengan mendefinisikan ulang state atau tipe di folder fitur.
-5. Setiap agent memeriksa `git status` dan `git diff` sebelum commit. Pastikan hanya file yang dimiliki agent tersebut yang berubah.
-6. Merge branch fondasi Agent 1 terlebih dahulu, lalu merge branch fitur Agent 2 dan Agent 3. Karena folder kepemilikan berbeda, konflik isi file harus dihindari. Jika konflik terjadi, jangan asal memilih “ours/theirs”; periksa penyebab dan pertahankan batas kepemilikan.
-7. Setelah integrasi, jalankan pemeriksaan TypeScript/lint yang tersedia dan tes alur manual end-to-end.
+### Agent 2
 
-## Checklist selesai per agent
+- [ ] Praktikan dapat melihat daftar jadwal dan detail sesi.
+- [ ] Tombol presensi hanya aktif ketika sesi `open` dan belum presensi.
+- [ ] Presensi sukses menampilkan feedback dan waktu kehadiran.
+- [ ] Presensi kedua untuk sesi yang sama dicegah dan dijelaskan kepada pengguna.
+- [ ] Sesi `upcoming`/`closed` memiliki UI nonaktif yang informatif.
+- [ ] Praktikan dapat melihat riwayatnya sendiri dan empty state jika kosong.
+- [ ] Semua pembacaan/perubahan data menggunakan API context yang telah disepakati.
 
-### Agent 1 — Fondasi
+## Aturan integrasi dan merge
 
-- [ ] Root layout membungkus navigator dengan `AttendanceProvider`.
-- [ ] Halaman awal memungkinkan pemilihan peran dan identitas dummy.
-- [ ] State sesi dan presensi dibagi lintas route dalam satu runtime.
-- [ ] API context sesuai kontrak dan mencegah presensi ganda.
-- [ ] Data awal mendukung status kosong, terbuka, dan tertutup.
-- [ ] Komponen shared (jika dibuat) tidak mengandung alur bisnis khusus peran.
-
-### Agent 2 — Asisten
-
-- [ ] Asisten dapat melihat jadwal dan detail sesi.
-- [ ] Asisten dapat membuka sesi dan melihat status terbaru.
-- [ ] Asisten dapat melihat rekap presensi lengkap dengan waktu kehadiran.
-- [ ] Empty state rekap terlihat ketika belum ada yang presensi.
-- [ ] Asisten dapat menutup sesi dan UI mencerminkan perubahan.
-- [ ] Dapat kembali ke `/` untuk memilih praktikan tanpa menghilangkan state.
-
-### Agent 3 — Praktikan
-
-- [ ] Praktikan dapat melihat jadwal dan detail sesi.
-- [ ] Tombol presensi hanya aktif ketika sesi terbuka dan praktikan belum presensi.
-- [ ] Presensi berhasil memberi feedback dan menunjukkan waktu kehadiran.
-- [ ] Presensi ganda dicegah dan diberi pesan yang sesuai.
-- [ ] Sesi belum dibuka/ditutup menjelaskan alasan presensi tidak tersedia.
-- [ ] Riwayat pribadi dan empty state berfungsi berdasarkan identitas yang dipilih.
-- [ ] Dapat kembali ke `/` untuk memilih asisten tanpa menghilangkan state.
+1. Agent 1 terlebih dahulu membuat dan meng-commit `attendance.ts`, `mockData.ts`, serta kerangka `AttendanceContext.tsx` dengan API kontrak yang sudah stabil. Beri tahu Agent 2 ketika kontrak siap.
+2. Kedua agent bekerja di branch terpisah. Agent 2 mengambil commit kontrak Agent 1, lalu hanya mengubah file yang menjadi kepemilikannya.
+3. Agent 1 dan Agent 2 tidak boleh sama-sama mengubah file yang sama. Jangan melakukan refactor lintas kepemilikan tanpa kesepakatan eksplisit.
+4. Jika kontrak ternyata kurang, Agent 2 membuat permintaan perubahan tertulis; Agent 1 mengubah file bersama, meng-commit perubahan, lalu Agent 2 mengambil commit tersebut.
+5. Sebelum merge, masing-masing agent memeriksa `git status` dan diff, memastikan tidak ada file milik agent lain ikut berubah, lalu menjalankan pemeriksaan TypeScript yang tersedia.
+6. Setelah kedua branch digabung, lakukan uji alur manual lintas peran pada satu runtime aplikasi: pilih identitas asisten → buka sesi → kembali ke pemilihan peran/pilih praktikan → presensi → pilih asisten kembali → periksa rekap → tutup sesi.
 
 ## Definisi selesai sprint
 
-Sprint selesai jika alur ini berfungsi di satu runtime aplikasi: pilih asisten → buka sesi → pilih praktikan → presensi → pilih asisten kembali → lihat rekap → tutup sesi. UI harus responsif, semua aksi memiliki feedback, daftar kosong/sesi belum dibuka/sesi sudah ditutup ditangani, presensi ganda dicegah, tidak ada backend/database, dan setiap agent hanya mengubah file yang menjadi tanggung jawabnya.
+Sprint dianggap selesai jika alur demo wajib berhasil dalam satu runtime aplikasi, UI responsif, interaksi dan status jelas, kondisi kosong ditangani, presensi ganda dicegah, tidak ada backend/database, dan tidak ada konflik perubahan file antara kedua agent.
