@@ -13,7 +13,8 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.itsmeverity.diplabs"
     },
     "web": {
       "bundler": "metro",
@@ -24,6 +25,14 @@
     ],
     "experiments": {
       "typedRoutes": false
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "85c618a8-91d3-43e2-8dca-09860386467c"
+      }
     }
   }
 }
