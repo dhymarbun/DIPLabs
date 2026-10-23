@@ -15,7 +15,7 @@ export default function RootLayout() {
           headerTintColor: '#0F172A',
           headerTitleStyle: {
             fontWeight: '700',
-            fontSize: 17,
+            fontSize: 16,
           },
           headerShadowVisible: false,
           contentStyle: {
@@ -26,25 +26,25 @@ export default function RootLayout() {
         <Stack.Screen
           name="index"
           options={{
-            title: 'DIPLabs — Absensi Praktikum',
+            headerShown: false,
           }}
         />
         <Stack.Screen
           name="asisten/index"
           options={{
-            title: 'Jadwal Sesi Asisten',
+            title: 'Jadwal Praktikum',
           }}
         />
         <Stack.Screen
           name="asisten/[sessionId]"
           options={{
-            title: 'Detail & Kontrol Sesi',
+            title: 'Detail Sesi',
           }}
         />
         <Stack.Screen
           name="asisten/rekap/[sessionId]"
           options={{
-            title: 'Rekap Presensi Sesi',
+            title: 'Rekap Presensi',
           }}
         />
       </Stack>

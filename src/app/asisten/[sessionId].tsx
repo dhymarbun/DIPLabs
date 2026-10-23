@@ -19,7 +19,7 @@ export function formatCheckInTime(isoString: string): string {
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
   const seconds = String(date.getSeconds()).padStart(2, '0');
-  return `${hours}:${minutes}:${seconds} WIB`;
+  return `${hours}:${minutes}:${seconds}`;
 }
 
 export default function AsistenSessionDetailScreen() {
@@ -36,10 +36,7 @@ export default function AsistenSessionDetailScreen() {
   const [pendingAction, setPendingAction] = useState<'open' | 'close' | null>(
     null
   );
-  const [feedbackMessage, setFeedbackMessage] = useState<{
-    type: 'success' | 'info';
-    text: string;
-  } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const session = useMemo(
     () => sessions.find((s) => s.id === sessionId),
@@ -56,20 +53,13 @@ export default function AsistenSessionDetailScreen() {
   if (!session) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.notFoundContainer}>
-          <Text style={styles.notFoundTitle}>Sesi Tidak Ditemukan</Text>
-          <Text style={styles.notFoundSubtitle}>
-            Data sesi praktikum dengan ID &ldquo;{sessionId}&rdquo; tidak
-            tersedia.
-          </Text>
+        <View style={styles.notFound}>
+          <Text style={styles.notFoundText}>Sesi tidak ditemukan.</Text>
           <Pressable
             onPress={() => router.replace('/asisten')}
-            style={({ pressed }) => [
-              styles.backButton,
-              pressed && styles.buttonPressed,
-            ]}
+            style={styles.backBtn}
           >
-            <Text style={styles.backButtonText}>← Kembali ke Daftar Sesi</Text>
+            <Text style={styles.backBtnText}>Kembali</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -81,16 +71,10 @@ export default function AsistenSessionDetailScreen() {
   const handleConfirmAction = () => {
     if (pendingAction === 'open') {
       openSession(session.id);
-      setFeedbackMessage({
-        type: 'success',
-        text: 'Sesi praktikum berhasil dibuka! Praktikan sekarang dapat melakukan presensi pada sesi ini.',
-      });
+      setNotice('Sesi dibuka. Praktikan sudah bisa melakukan presensi.');
     } else if (pendingAction === 'close') {
       closeSession(session.id);
-      setFeedbackMessage({
-        type: 'info',
-        text: 'Sesi praktikum telah ditutup. Praktikan tidak dapat lagi mengirim presensi baru pada sesi ini.',
-      });
+      setNotice('Sesi ditutup.');
     }
     setPendingAction(null);
   };
@@ -102,47 +86,22 @@ export default function AsistenSessionDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.container}>
-          {/* Feedback Banner */}
-          {feedbackMessage ? (
-            <View
-              style={[
-                styles.feedbackBanner,
-                feedbackMessage.type === 'success'
-                  ? styles.feedbackSuccess
-                  : styles.feedbackInfo,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.feedbackText,
-                  feedbackMessage.type === 'success'
-                    ? styles.feedbackTextSuccess
-                    : styles.feedbackTextInfo,
-                ]}
-              >
-                {feedbackMessage.text}
-              </Text>
+          {notice ? (
+            <View style={styles.noticeBox}>
+              <Text style={styles.noticeText}>{notice}</Text>
             </View>
           ) : null}
 
-          {/* Session Info Card */}
+          {/* Detail Sesi */}
           <View style={styles.card}>
             <View style={styles.headerRow}>
-              <View style={styles.classBadge}>
-                <Text style={styles.classBadgeText}>
-                  Kelas {session.className}
-                </Text>
-              </View>
+              <Text style={styles.classBadge}>{session.className}</Text>
               <StatusBadge status={session.status} />
             </View>
 
-            <Text style={styles.sessionTitle}>{session.practicalName}</Text>
+            <Text style={styles.title}>{session.practicalName}</Text>
 
             <View style={styles.infoList}>
-              <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>ID Sesi</Text>
-                <Text style={styles.infoValue}>{session.id}</Text>
-              </View>
               <View style={styles.infoItem}>
                 <Text style={styles.infoLabel}>Tanggal</Text>
                 <Text style={styles.infoValue}>
@@ -150,167 +109,96 @@ export default function AsistenSessionDetailScreen() {
                 </Text>
               </View>
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Jam Praktikum</Text>
+                <Text style={styles.infoLabel}>Waktu</Text>
                 <Text style={styles.infoValue}>
                   {session.startTime} – {session.endTime} WIB
                 </Text>
               </View>
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Ruangan / Lokasi</Text>
-                <Text style={styles.infoValue}>
-                  {session.room ?? 'Belum ditentukan'}
-                </Text>
+                <Text style={styles.infoLabel}>Ruangan</Text>
+                <Text style={styles.infoValue}>{session.room ?? '-'}</Text>
               </View>
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Asisten Bertugas</Text>
+                <Text style={styles.infoLabel}>Asisten</Text>
                 <Text style={styles.infoValue}>
                   {session.assistantName ?? '-'}
                 </Text>
               </View>
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Kehadiran Saat Ini</Text>
-                <Text style={styles.infoValueHighlight}>
+                <Text style={styles.infoLabel}>Kehadiran</Text>
+                <Text style={styles.infoValue}>
                   {sessionRecords.length}
-                  {totalParticipants > 0
-                    ? ` dari ${totalParticipants} praktikan terdaftar`
-                    : ' praktikan hadir'}
+                  {totalParticipants > 0 ? ` / ${totalParticipants}` : ''}{' '}
+                  praktikan
                 </Text>
               </View>
             </View>
-          </View>
 
-          {/* Session Control Card (US-03 & US-08) */}
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Kontrol Status Sesi</Text>
-            <Text style={styles.sectionDescription}>
-              {session.status === 'upcoming'
-                ? 'Sesi ini belum dibuka. Tekan tombol "Buka Sesi Praktikum" agar praktikan dapat melakukan presensi.'
-                : session.status === 'open'
-                ? 'Sesi sedang terbuka dan menerima presensi praktikan. Anda dapat menutup sesi setelah waktu presensi berakhir.'
-                : 'Sesi ini telah ditutup. Presensi baru dinonaktifkan untuk praktikan, namun Anda dapat membuka kembali sesi jika diperlukan.'}
-            </Text>
-
-            <View style={styles.actionButtonsGroup}>
-              {/* Open Session Button */}
+            {/* Tombol Buka / Tutup Sesi */}
+            <View style={styles.actionRow}>
               <Pressable
                 disabled={session.status === 'open'}
                 onPress={() => setPendingAction('open')}
-                style={({ pressed }) => [
+                style={[
                   styles.actionBtn,
                   session.status === 'open'
-                    ? styles.actionBtnDisabled
+                    ? styles.btnDisabled
                     : styles.openBtn,
-                  pressed &&
-                    session.status !== 'open' &&
-                    styles.buttonPressed,
                 ]}
               >
                 <Text
                   style={[
                     styles.actionBtnText,
-                    session.status === 'open' && styles.actionBtnTextDisabled,
+                    session.status === 'open' && styles.btnTextDisabled,
                   ]}
                 >
-                  {session.status === 'open'
-                    ? '✓ Sesi Sedang Dibuka'
-                    : session.status === 'closed'
-                    ? 'Buka Kembali Sesi Praktikum'
-                    : 'Buka Sesi Praktikum'}
+                  {session.status === 'open' ? 'Sedang Dibuka' : 'Buka Sesi'}
                 </Text>
               </Pressable>
 
-              {/* Close Session Button */}
               <Pressable
                 disabled={session.status !== 'open'}
                 onPress={() => setPendingAction('close')}
-                style={({ pressed }) => [
+                style={[
                   styles.actionBtn,
                   session.status !== 'open'
-                    ? styles.actionBtnDisabled
+                    ? styles.btnDisabled
                     : styles.closeBtn,
-                  pressed &&
-                    session.status === 'open' &&
-                    styles.buttonPressed,
                 ]}
               >
                 <Text
                   style={[
                     styles.actionBtnText,
-                    session.status !== 'open' && styles.actionBtnTextDisabled,
+                    session.status !== 'open' && styles.btnTextDisabled,
                   ]}
                 >
-                  {session.status === 'closed'
-                    ? 'Sesi Sudah Ditutup'
-                    : 'Tutup Sesi Praktikum'}
-                </Text>
-              </Pressable>
-            </View>
-
-            {/* Quick Role Switch Helper for Demo */}
-            <View style={styles.demoHelperRow}>
-              <Pressable
-                onPress={() => router.push(`/asisten/rekap/${session.id}`)}
-                style={({ pressed }) => [
-                  styles.secondaryBtn,
-                  pressed && styles.buttonPressed,
-                ]}
-              >
-                <Text style={styles.secondaryBtnText}>
-                  Lihat Halaman Rekap Lengkap →
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => router.replace('/')}
-                style={({ pressed }) => [
-                  styles.switchRoleOutlineBtn,
-                  pressed && styles.buttonPressed,
-                ]}
-              >
-                <Text style={styles.switchRoleOutlineText}>
-                  Ganti Peran (Uji Praktikan) ⇄
+                  Tutup Sesi
                 </Text>
               </Pressable>
             </View>
           </View>
 
-          {/* Inline Attendance Recap Section (US-07) */}
+          {/* Daftar Hadir */}
           <View style={styles.card}>
-            <View style={styles.recapHeaderRow}>
-              <View>
-                <Text style={styles.sectionTitle}>
-                  Daftar Hadir Praktikan ({sessionRecords.length})
-                </Text>
-                <Text style={styles.recapSubtext}>
-                  Rekap waktu kehadiran real-time selama aplikasi berjalan
-                </Text>
-              </View>
+            <View style={styles.recapHeader}>
+              <Text style={styles.sectionTitle}>
+                Daftar Hadir ({sessionRecords.length})
+              </Text>
               <Pressable
                 onPress={() => router.push(`/asisten/rekap/${session.id}`)}
-                style={({ pressed }) => [
-                  styles.fullRecapBadge,
-                  pressed && styles.buttonPressed,
-                ]}
               >
-                <Text style={styles.fullRecapBadgeText}>Detail Rekap</Text>
+                <Text style={styles.linkText}>Lihat Rekap →</Text>
               </Pressable>
             </View>
 
             {sessionRecords.length === 0 ? (
-              <View style={styles.emptyRecapBox}>
-                <Text style={styles.emptyRecapTitle}>
-                  Belum Ada Praktikan yang Presensi
-                </Text>
-                <Text style={styles.emptyRecapDesc}>
-                  {session.status === 'open'
-                    ? 'Sesi sudah terbuka. Silakan beralih ke peran Praktikan untuk mencoba melakukan presensi pada sesi ini.'
-                    : 'Buka sesi terlebih dahulu agar praktikan dapat mencatat kehadiran.'}
-                </Text>
-              </View>
+              <Text style={styles.emptyText}>
+                Belum ada praktikan yang melakukan presensi.
+              </Text>
             ) : (
               <View style={styles.recordList}>
                 {sessionRecords.map((record, index) => {
-                  const studentInfo = students.find(
+                  const student = students.find(
                     (s) => s.id === record.studentId
                   );
                   return (
@@ -318,24 +206,18 @@ export default function AsistenSessionDetailScreen() {
                       key={`${record.sessionId}-${record.studentId}`}
                       style={styles.recordItem}
                     >
-                      <View style={styles.recordIndexCircle}>
-                        <Text style={styles.recordIndexText}>{index + 1}</Text>
-                      </View>
+                      <Text style={styles.recordNo}>{index + 1}.</Text>
                       <View style={styles.recordMain}>
-                        <Text style={styles.recordStudentName}>
+                        <Text style={styles.recordName}>
                           {record.studentName}
                         </Text>
-                        <Text style={styles.recordStudentMeta}>
-                          NIM {studentInfo?.nim ?? record.studentId} • Kelas{' '}
-                          {studentInfo?.className ?? session.className}
+                        <Text style={styles.recordSub}>
+                          {student?.nim ?? record.studentId}
                         </Text>
                       </View>
-                      <View style={styles.recordTimeBox}>
-                        <Text style={styles.recordTimeLabel}>Waktu Hadir</Text>
-                        <Text style={styles.recordTimeValue}>
-                          {formatCheckInTime(record.checkedInAt)}
-                        </Text>
-                      </View>
+                      <Text style={styles.recordTime}>
+                        {formatCheckInTime(record.checkedInAt)}
+                      </Text>
                     </View>
                   );
                 })}
@@ -345,20 +227,15 @@ export default function AsistenSessionDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Confirmation Modal */}
       <ConfirmActionModal
         visible={pendingAction !== null}
-        title={
-          pendingAction === 'open'
-            ? 'Buka Sesi Praktikum?'
-            : 'Tutup Sesi Praktikum?'
-        }
+        title={pendingAction === 'open' ? 'Buka Sesi?' : 'Tutup Sesi?'}
         description={
           pendingAction === 'open'
-            ? `Status sesi "${session.practicalName}" (${session.className}) akan diubah menjadi SEDANG DIBUKA sehingga praktikan dapat melakukan presensi.`
-            : `Status sesi "${session.practicalName}" (${session.className}) akan diubah menjadi SUDAH DITUTUP. Praktikan tidak akan bisa melakukan presensi lagi.`
+            ? `Buka presensi untuk ${session.practicalName} (${session.className})?`
+            : `Tutup presensi untuk ${session.practicalName} (${session.className})?`
         }
-        confirmLabel={pendingAction === 'open' ? 'Ya, Buka Sesi' : 'Ya, Tutup Sesi'}
+        confirmLabel={pendingAction === 'open' ? 'Buka' : 'Tutup'}
         confirmTone={pendingAction === 'close' ? 'danger' : 'primary'}
         onCancel={() => setPendingAction(null)}
         onConfirm={handleConfirmAction}
@@ -373,43 +250,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   scrollContent: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    padding: 16,
     alignItems: 'center',
   },
   container: {
     width: '100%',
-    maxWidth: 680,
-    gap: 16,
+    maxWidth: 640,
+    gap: 14,
   },
-  feedbackBanner: {
-    borderRadius: 12,
-    padding: 14,
+  noticeBox: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
     borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
   },
-  feedbackSuccess: {
-    backgroundColor: '#DCFCE7',
-    borderColor: '#86EFAC',
-  },
-  feedbackInfo: {
-    backgroundColor: '#F1F5F9',
-    borderColor: '#CBD5E1',
-  },
-  feedbackText: {
+  noticeText: {
     fontSize: 13,
+    color: '#1E3A8A',
     fontWeight: '600',
-    lineHeight: 19,
-  },
-  feedbackTextSuccess: {
-    color: '#166534',
-  },
-  feedbackTextInfo: {
-    color: '#334155',
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 18,
+    borderRadius: 12,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -417,46 +281,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    flexWrap: 'wrap',
-    gap: 8,
+    marginBottom: 10,
   },
   classBadge: {
     backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  classBadgeText: {
     color: '#1D4ED8',
     fontSize: 12,
     fontWeight: '700',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
-  sessionTitle: {
-    fontSize: 19,
-    fontWeight: '800',
+  title: {
+    fontSize: 17,
+    fontWeight: '700',
     color: '#0F172A',
-    lineHeight: 26,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   infoList: {
     borderTopWidth: 1,
     borderColor: '#F1F5F9',
     paddingTop: 12,
-    gap: 10,
+    gap: 8,
   },
   infoItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
     gap: 12,
   },
   infoLabel: {
     fontSize: 13,
     color: '#64748B',
-    minWidth: 120,
   },
   infoValue: {
     fontSize: 13,
@@ -465,39 +320,16 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'right',
   },
-  infoValueHighlight: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#2563EB',
-    flex: 1,
-    textAlign: 'right',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 4,
-  },
-  sectionDescription: {
-    fontSize: 13,
-    color: '#64748B',
-    lineHeight: 19,
-    marginBottom: 16,
-  },
-  actionButtonsGroup: {
+  actionRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 10,
-    marginBottom: 12,
+    marginTop: 16,
   },
   actionBtn: {
     flex: 1,
-    minWidth: 200,
-    paddingVertical: 13,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    paddingVertical: 11,
+    borderRadius: 10,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   openBtn: {
     backgroundColor: '#16A34A',
@@ -505,184 +337,91 @@ const styles = StyleSheet.create({
   closeBtn: {
     backgroundColor: '#DC2626',
   },
-  actionBtnDisabled: {
+  btnDisabled: {
     backgroundColor: '#E2E8F0',
   },
   actionBtnText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  actionBtnTextDisabled: {
+  btnTextDisabled: {
     color: '#64748B',
   },
-  demoHelperRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  secondaryBtn: {
-    flex: 1,
-    minWidth: 180,
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    paddingVertical: 11,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  secondaryBtnText: {
-    color: '#1D4ED8',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  switchRoleOutlineBtn: {
-    flex: 1,
-    minWidth: 180,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingVertical: 11,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  switchRoleOutlineText: {
-    color: '#334155',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  recapHeaderRow: {
+  recapHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 14,
-    gap: 10,
-  },
-  recapSubtext: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-  fullRecapBadge: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-  },
-  fullRecapBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#334155',
-  },
-  emptyRecapBox: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 20,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    marginBottom: 12,
   },
-  emptyRecapTitle: {
-    fontSize: 14,
+  sectionTitle: {
+    fontSize: 15,
     fontWeight: '700',
-    color: '#334155',
-    marginBottom: 4,
+    color: '#0F172A',
   },
-  emptyRecapDesc: {
-    fontSize: 12,
+  linkText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2563EB',
+  },
+  emptyText: {
+    fontSize: 13,
     color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 18,
+    paddingVertical: 12,
   },
   recordList: {
-    gap: 10,
+    gap: 8,
   },
   recordItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderColor: '#F1F5F9',
+    gap: 8,
   },
-  recordIndexCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#DBEAFE',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  recordIndexText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1D4ED8',
+  recordNo: {
+    fontSize: 13,
+    color: '#64748B',
+    width: 22,
   },
   recordMain: {
     flex: 1,
   },
-  recordStudentName: {
+  recordName: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F172A',
   },
-  recordStudentMeta: {
+  recordSub: {
     fontSize: 12,
     color: '#64748B',
-    marginTop: 2,
   },
-  recordTimeBox: {
-    alignItems: 'flex-end',
-  },
-  recordTimeLabel: {
-    fontSize: 10,
-    color: '#64748B',
-    textTransform: 'uppercase',
-  },
-  recordTimeValue: {
+  recordTime: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#166534',
-    marginTop: 2,
   },
-  buttonPressed: {
-    opacity: 0.85,
-  },
-  notFoundContainer: {
+  notFound: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: 20,
+    gap: 12,
   },
-  notFoundTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 6,
+  notFoundText: {
+    fontSize: 15,
+    color: '#475569',
   },
-  notFoundSubtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-    marginBottom: 18,
-  },
-  backButton: {
+  backBtn: {
     backgroundColor: '#2563EB',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
-  backButtonText: {
+  backBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

@@ -1,64 +1,87 @@
 import React, { useMemo, useState } from 'react';
 import {
+  Modal,
   Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAttendance } from '../context/AttendanceContext';
 import { AppUser, UserRole } from '../types/attendance';
 
-export default function RoleSelectionScreen() {
+export default function LoginScreen() {
   const router = useRouter();
-  const {
-    currentUser,
-    setCurrentUser,
-    assistants,
-    students,
-    sessions,
-    attendanceRecords,
-  } = useAttendance();
+  const { currentUser, setCurrentUser, assistants, students } = useAttendance();
 
-  const [selectedRole, setSelectedRole] = useState<UserRole>(
-    currentUser?.role ?? 'asisten'
+  const [role, setRole] = useState<UserRole>(currentUser?.role ?? 'asisten');
+  const [identifier, setIdentifier] = useState<string>(
+    currentUser?.nim ?? assistants[0]?.nim ?? ''
   );
-  const [selectedUserId, setSelectedUserId] = useState<string>(() => {
-    if (currentUser) return currentUser.id;
-    return assistants[0]?.id ?? '';
-  });
+  const [password, setPassword] = useState<string>('12345678');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [dummyModalVisible, setDummyModalVisible] = useState<boolean>(false);
 
-  const userList = selectedRole === 'asisten' ? assistants : students;
+  const allUsersForRole = useMemo(
+    () => (role === 'asisten' ? assistants : students),
+    [role, assistants, students]
+  );
 
-  const selectedUser: AppUser | undefined = useMemo(() => {
+  const matchedUser: AppUser | undefined = useMemo(() => {
+    const q = identifier.trim().toLowerCase();
+    if (!q) return undefined;
     return (
-      userList.find((u) => u.id === selectedUserId) ??
-      userList[0]
+      allUsersForRole.find(
+        (u) =>
+          u.nim?.toLowerCase() === q ||
+          u.id.toLowerCase() === q ||
+          u.name.toLowerCase().includes(q)
+      ) ?? allUsersForRole[0]
     );
-  }, [userList, selectedUserId]);
+  }, [allUsersForRole, identifier]);
 
-  const openSessionsCount = useMemo(
-    () => sessions.filter((s) => s.status === 'open').length,
-    [sessions]
-  );
-
-  const handleSelectRole = (role: UserRole) => {
-    setSelectedRole(role);
-    const list = role === 'asisten' ? assistants : students;
-    if (list.length > 0) {
-      setSelectedUserId(list[0].id);
+  const handleRoleSwitch = (nextRole: UserRole) => {
+    setRole(nextRole);
+    setErrorMessage(null);
+    const list = nextRole === 'asisten' ? assistants : students;
+    if (list[0]?.nim) {
+      setIdentifier(list[0].nim);
     }
   };
 
-  const handleContinue = () => {
-    if (!selectedUser) return;
-    setCurrentUser(selectedUser);
-    if (selectedUser.role === 'asisten') {
-      router.push('/asisten');
-    } else {
-      router.push('/praktikan');
+  const handleLogin = () => {
+    if (!identifier.trim()) {
+      setErrorMessage('Masukkan NIM atau email terlebih dahulu.');
+      return;
+    }
+    if (!password.trim()) {
+      setErrorMessage('Masukkan password terlebih dahulu.');
+      return;
+    }
+    const targetUser = matchedUser ?? allUsersForRole[0];
+    if (!targetUser) {
+      setErrorMessage('Akun tidak ditemukan.');
+      return;
+    }
+
+    setErrorMessage(null);
+    setCurrentUser(targetUser);
+    router.push(targetUser.role === 'asisten' ? '/asisten' : '/praktikan');
+  };
+
+  const handleSelectDummyUser = (user: AppUser, loginImmediately: boolean) => {
+    setRole(user.role);
+    setIdentifier(user.nim ?? user.id);
+    setPassword('12345678');
+    setErrorMessage(null);
+    setDummyModalVisible(false);
+
+    if (loginImmediately) {
+      setCurrentUser(user);
+      router.push(user.role === 'asisten' ? '/asisten' : '/praktikan');
     }
   };
 
@@ -66,270 +89,230 @@ export default function RoleSelectionScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.container}>
-          {/* Hero / Header Card */}
-          <View style={styles.heroCard}>
-            <View style={styles.badgeRow}>
-              <View style={styles.appBadge}>
-                <Text style={styles.appBadgeText}>SPRINT 1 PROTOTYPE</Text>
-              </View>
-              <View style={styles.runtimePill}>
-                <View style={styles.runtimeDot} />
-                <Text style={styles.runtimeText}>
-                  {openSessionsCount} Sesi Terbuka • {attendanceRecords.length}{' '}
-                  Presensi Tercatat
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.heroTitle}>Sistem Absensi Praktikum DIPLabs</Text>
-            <Text style={styles.heroSubtitle}>
-              Pilih peran dan identitas dummy di bawah untuk mensimulasikan alur
-              pembukaan sesi, presensi praktikan, dan rekap kehadiran lintas
-              peran dalam satu runtime.
-            </Text>
+          <View style={styles.headerBlock}>
+            <Text style={styles.brand}>DIPLabs</Text>
+            <Text style={styles.subtitle}>Presensi Praktikum</Text>
           </View>
 
-          {/* Active User Banner if already logged in */}
-          {currentUser ? (
-            <View style={styles.activeUserBanner}>
-              <View style={styles.activeUserInfo}>
-                <Text style={styles.activeUserLabel}>
-                  Identitas Aktif Saat Ini
-                </Text>
-                <Text style={styles.activeUserName}>
-                  {currentUser.name} ({currentUser.role.toUpperCase()})
-                </Text>
-                <Text style={styles.activeUserMeta}>
-                  NIM {currentUser.nim ?? '-'} • Kelas{' '}
-                  {currentUser.className ?? '-'}
-                </Text>
-              </View>
-              <Pressable
-                onPress={() =>
-                  router.push(
-                    currentUser.role === 'asisten' ? '/asisten' : '/praktikan'
-                  )
-                }
-                style={({ pressed }) => [
-                  styles.resumeButton,
-                  pressed && styles.buttonPressed,
-                ]}
-              >
-                <Text style={styles.resumeButtonText}>Lanjutkan →</Text>
-              </Pressable>
-            </View>
-          ) : null}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Masuk</Text>
 
-          {/* Step 1: Role Switcher */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.stepLabel}>LANGKAH 1</Text>
-            <Text style={styles.sectionTitle}>Pilih Peran Pengguna</Text>
-            <Text style={styles.sectionHelper}>
-              Ganti peran kapan saja untuk menguji interaksi antara Asisten dan
-              Praktikan.
-            </Text>
-
-            <View style={styles.roleTabs}>
+            {/* Role Toggle */}
+            <View style={styles.roleSegmented}>
               <Pressable
-                onPress={() => handleSelectRole('asisten')}
+                onPress={() => handleRoleSwitch('asisten')}
                 style={[
-                  styles.roleTab,
-                  selectedRole === 'asisten' && styles.roleTabActive,
+                  styles.segmentBtn,
+                  role === 'asisten' && styles.segmentBtnActive,
                 ]}
               >
-                <View style={styles.roleHeaderRow}>
-                  <Text
-                    style={[
-                      styles.roleTabTitle,
-                      selectedRole === 'asisten' && styles.roleTabTitleActive,
-                    ]}
-                  >
-                    Asisten Praktikum
-                  </Text>
-                  <View
-                    style={[
-                      styles.countChip,
-                      selectedRole === 'asisten' && styles.countChipActive,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.countChipText,
-                        selectedRole === 'asisten' && styles.countChipTextActive,
-                      ]}
-                    >
-                      {assistants.length} Akun
-                    </Text>
-                  </View>
-                </View>
                 <Text
                   style={[
-                    styles.roleTabDesc,
-                    selectedRole === 'asisten' && styles.roleTabDescActive,
+                    styles.segmentText,
+                    role === 'asisten' && styles.segmentTextActive,
                   ]}
                 >
-                  Kelola jadwal, buka/tutup sesi, & pantau rekap kehadiran.
+                  Asisten
                 </Text>
               </Pressable>
-
               <Pressable
-                onPress={() => handleSelectRole('praktikan')}
+                onPress={() => handleRoleSwitch('praktikan')}
                 style={[
-                  styles.roleTab,
-                  selectedRole === 'praktikan' && styles.roleTabActive,
+                  styles.segmentBtn,
+                  role === 'praktikan' && styles.segmentBtnActive,
                 ]}
               >
-                <View style={styles.roleHeaderRow}>
-                  <Text
-                    style={[
-                      styles.roleTabTitle,
-                      selectedRole === 'praktikan' && styles.roleTabTitleActive,
-                    ]}
-                  >
-                    Praktikan
-                  </Text>
-                  <View
-                    style={[
-                      styles.countChip,
-                      selectedRole === 'praktikan' && styles.countChipActive,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.countChipText,
-                        selectedRole === 'praktikan' &&
-                          styles.countChipTextActive,
-                      ]}
-                    >
-                      {students.length} Akun
-                    </Text>
-                  </View>
-                </View>
                 <Text
                   style={[
-                    styles.roleTabDesc,
-                    selectedRole === 'praktikan' && styles.roleTabDescActive,
+                    styles.segmentText,
+                    role === 'praktikan' && styles.segmentTextActive,
                   ]}
                 >
-                  Lihat jadwal praktikum, lakukan presensi, & cek riwayat hadir.
+                  Praktikan
                 </Text>
               </Pressable>
             </View>
-          </View>
 
-          {/* Step 2: Identity Selection */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.stepLabel}>LANGKAH 2</Text>
-            <Text style={styles.sectionTitle}>
-              Pilih Identitas{' '}
-              {selectedRole === 'asisten' ? 'Asisten' : 'Praktikan'} (Dummy)
-            </Text>
-            <Text style={styles.sectionHelper}>
-              Pilih salah satu akun fiktif di bawah untuk masuk ke halaman{' '}
-              {selectedRole === 'asisten' ? 'Asisten' : 'Praktikan'}.
-            </Text>
+            {/* Inputs */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>NIM / Email</Text>
+              <TextInput
+                value={identifier}
+                onChangeText={(val) => {
+                  setIdentifier(val);
+                  if (errorMessage) setErrorMessage(null);
+                }}
+                placeholder="Contoh: 13522011"
+                placeholderTextColor="#94A3B8"
+                autoCapitalize="none"
+                style={styles.input}
+              />
+            </View>
 
-            {userList.length === 0 ? (
-              <View style={styles.emptyBox}>
-                <Text style={styles.emptyBoxText}>
-                  Tidak ada daftar identitas tersedia untuk peran ini.
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                value={password}
+                onChangeText={(val) => {
+                  setPassword(val);
+                  if (errorMessage) setErrorMessage(null);
+                }}
+                placeholder="Masukkan password"
+                placeholderTextColor="#94A3B8"
+                secureTextEntry
+                style={styles.input}
+              />
+            </View>
+
+            {matchedUser ? (
+              <View style={styles.previewAccountBox}>
+                <Text style={styles.previewLabel}>Akun terpilih:</Text>
+                <Text style={styles.previewValue}>
+                  {matchedUser.name} ({matchedUser.nim} •{' '}
+                  {matchedUser.className})
                 </Text>
               </View>
-            ) : (
-              <View style={styles.identityList}>
-                {userList.map((user) => {
-                  const isSelected = selectedUser?.id === user.id;
-                  return (
-                    <Pressable
-                      key={user.id}
-                      onPress={() => setSelectedUserId(user.id)}
-                      style={({ pressed }) => [
-                        styles.identityCard,
-                        isSelected && styles.identityCardSelected,
-                        pressed && styles.buttonPressed,
-                      ]}
-                    >
-                      <View style={styles.radioOuter}>
-                        {isSelected ? <View style={styles.radioInner} /> : null}
-                      </View>
-                      <View style={styles.identityBody}>
-                        <Text
-                          style={[
-                            styles.identityName,
-                            isSelected && styles.identityNameSelected,
-                          ]}
-                        >
-                          {user.name}
-                        </Text>
-                        <Text style={styles.identitySub}>
-                          NIM: {user.nim ?? '-'} • Kelas:{' '}
-                          {user.className ?? '-'}
-                        </Text>
-                      </View>
-                      <View
-                        style={[
-                          styles.rolePill,
-                          user.role === 'asisten'
-                            ? styles.rolePillAsisten
-                            : styles.rolePillPraktikan,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.rolePillText,
-                            user.role === 'asisten'
-                              ? styles.rolePillTextAsisten
-                              : styles.rolePillTextPraktikan,
-                          ]}
-                        >
-                          {user.role === 'asisten' ? 'Asisten' : 'Praktikan'}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            )}
+            ) : null}
 
-            {/* Submit Button */}
+            {errorMessage ? (
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            ) : null}
+
             <Pressable
-              onPress={handleContinue}
-              disabled={!selectedUser}
+              onPress={handleLogin}
               style={({ pressed }) => [
-                styles.submitButton,
-                !selectedUser && styles.submitButtonDisabled,
-                pressed && selectedUser && styles.buttonPressed,
+                styles.loginBtn,
+                pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.submitButtonText}>
-                {selectedUser
-                  ? `Masuk sebagai ${selectedUser.name} (${
-                      selectedUser.role === 'asisten' ? 'Asisten' : 'Praktikan'
-                    })`
-                  : 'Pilih Identitas Terlebih Dahulu'}
-              </Text>
+              <Text style={styles.loginBtnText}>Masuk</Text>
+            </Pressable>
+
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>atau</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <Pressable
+              onPress={() => setDummyModalVisible(true)}
+              style={({ pressed }) => [
+                styles.dummyBtn,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.dummyBtnText}>Pilih Akun Dummy</Text>
             </Pressable>
           </View>
 
-          {/* Quick Demo Guide Card */}
-          <View style={styles.guideCard}>
-            <Text style={styles.guideTitle}>Panduan Alur Demo Sprint 1</Text>
-            <Text style={styles.guideStep}>
-              1. Masuk sebagai Asisten → Pilih sesi praktikum → Buka Sesi.
-            </Text>
-            <Text style={styles.guideStep}>
-              2. Kembali ke halaman ini → Masuk sebagai Praktikan → Presensi
-              pada sesi yang sama.
-            </Text>
-            <Text style={styles.guideStep}>
-              3. Masuk kembali sebagai Asisten → Buka Rekap Presensi & lihat
-              waktu hadir → Tutup Sesi.
-            </Text>
-          </View>
+          {currentUser ? (
+            <Pressable
+              onPress={() =>
+                router.push(
+                  currentUser.role === 'asisten' ? '/asisten' : '/praktikan'
+                )
+              }
+              style={({ pressed }) => [
+                styles.activeSessionCard,
+                pressed && styles.pressed,
+              ]}
+            >
+              <View>
+                <Text style={styles.activeSessionLabel}>Sesi login aktif</Text>
+                <Text style={styles.activeSessionName}>
+                  {currentUser.name} ({currentUser.role})
+                </Text>
+              </View>
+              <Text style={styles.activeSessionLink}>Lanjut →</Text>
+            </Pressable>
+          ) : null}
         </View>
       </ScrollView>
+
+      {/* Modal Daftar Akun Dummy */}
+      <Modal
+        visible={dummyModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDummyModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Daftar Akun Dummy</Text>
+              <Pressable
+                onPress={() => setDummyModalVisible(false)}
+                style={styles.closeModalBtn}
+              >
+                <Text style={styles.closeModalText}>Tutup</Text>
+              </Pressable>
+            </View>
+
+            <ScrollView
+              style={styles.modalList}
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.groupHeading}>Asisten</Text>
+              {assistants.map((item) => (
+                <View key={item.id} style={styles.dummyItem}>
+                  <View style={styles.dummyInfo}>
+                    <Text style={styles.dummyName}>{item.name}</Text>
+                    <Text style={styles.dummyMeta}>
+                      NIM {item.nim} • Kelas {item.className}
+                    </Text>
+                  </View>
+                  <View style={styles.dummyActions}>
+                    <Pressable
+                      onPress={() => handleSelectDummyUser(item, false)}
+                      style={styles.fillBtn}
+                    >
+                      <Text style={styles.fillBtnText}>Isi Form</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => handleSelectDummyUser(item, true)}
+                      style={styles.directLoginBtn}
+                    >
+                      <Text style={styles.directLoginText}>Masuk</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
+
+              <Text style={[styles.groupHeading, { marginTop: 16 }]}>
+                Praktikan
+              </Text>
+              {students.map((item) => (
+                <View key={item.id} style={styles.dummyItem}>
+                  <View style={styles.dummyInfo}>
+                    <Text style={styles.dummyName}>{item.name}</Text>
+                    <Text style={styles.dummyMeta}>
+                      NIM {item.nim} • Kelas {item.className}
+                    </Text>
+                  </View>
+                  <View style={styles.dummyActions}>
+                    <Pressable
+                      onPress={() => handleSelectDummyUser(item, false)}
+                      style={styles.fillBtn}
+                    >
+                      <Text style={styles.fillBtnText}>Isi Form</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => handleSelectDummyUser(item, true)}
+                      style={styles.directLoginBtn}
+                    >
+                      <Text style={styles.directLoginText}>Masuk</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -340,319 +323,263 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   scrollContent: {
-    paddingVertical: 20,
-    paddingHorizontal: 16,
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 20,
     alignItems: 'center',
   },
   container: {
     width: '100%',
-    maxWidth: 680,
+    maxWidth: 420,
     gap: 16,
   },
-  heroCard: {
-    backgroundColor: '#0F172A',
+  headerBlock: {
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  brand: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 12,
-  },
-  appBadge: {
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
   },
-  appBadgeText: {
-    color: '#38BDF8',
-    fontSize: 11,
+  cardTitle: {
+    fontSize: 18,
     fontWeight: '700',
-    letterSpacing: 0.6,
+    color: '#0F172A',
+    marginBottom: 14,
   },
-  runtimePill: {
+  roleSegmented: {
     flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 10,
+    padding: 4,
+    marginBottom: 16,
+  },
+  segmentBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
   },
-  runtimeDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: '#22C55E',
-    marginRight: 6,
+  segmentBtnActive: {
+    backgroundColor: '#FFFFFF',
   },
-  runtimeText: {
-    color: '#E2E8F0',
-    fontSize: 12,
-    fontWeight: '500',
+  segmentText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
   },
-  heroTitle: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: '800',
+  segmentTextActive: {
+    color: '#0F172A',
+  },
+  fieldGroup: {
+    marginBottom: 14,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#334155',
     marginBottom: 6,
   },
-  heroSubtitle: {
-    color: '#94A3B8',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  activeUserBanner: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
+  input: {
     borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#0F172A',
+    backgroundColor: '#F8FAFC',
+  },
+  previewAccountBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  previewLabel: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  previewValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginTop: 2,
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 12,
+    marginBottom: 12,
+  },
+  loginBtn: {
+    backgroundColor: '#2563EB',
+    paddingVertical: 13,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  loginBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 12,
+    marginVertical: 14,
+    gap: 10,
   },
-  activeUserInfo: {
+  dividerLine: {
     flex: 1,
-    minWidth: 200,
+    height: 1,
+    backgroundColor: '#E2E8F0',
   },
-  activeUserLabel: {
+  dividerText: {
+    fontSize: 12,
+    color: '#94A3B8',
+  },
+  dummyBtn: {
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    paddingVertical: 11,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  dummyBtnText: {
+    color: '#334155',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  activeSessionCard: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  activeSessionLabel: {
     fontSize: 11,
-    fontWeight: '700',
     color: '#2563EB',
-    textTransform: 'uppercase',
-    marginBottom: 2,
   },
-  activeUserName: {
-    fontSize: 15,
+  activeSessionName: {
+    fontSize: 14,
     fontWeight: '700',
     color: '#1E3A8A',
   },
-  activeUserMeta: {
-    fontSize: 12,
-    color: '#3B82F6',
-    marginTop: 2,
-  },
-  resumeButton: {
-    backgroundColor: '#2563EB',
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 10,
-  },
-  resumeButtonText: {
-    color: '#FFFFFF',
+  activeSessionLink: {
     fontSize: 13,
-    fontWeight: '700',
-  },
-  sectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  stepLabel: {
-    fontSize: 11,
     fontWeight: '700',
     color: '#2563EB',
-    letterSpacing: 0.6,
-    marginBottom: 4,
   },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 4,
+  pressed: {
+    opacity: 0.85,
   },
-  sectionHelper: {
-    fontSize: 13,
-    color: '#64748B',
-    marginBottom: 14,
-    lineHeight: 18,
-  },
-  roleTabs: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  roleTab: {
+  modalBackdrop: {
     flex: 1,
-    minWidth: 220,
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    padding: 14,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    justifyContent: 'flex-end',
   },
-  roleTabActive: {
-    borderColor: '#2563EB',
-    backgroundColor: '#EFF6FF',
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '80%',
   },
-  roleHeaderRow: {
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
-    gap: 8,
-  },
-  roleTabTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  roleTabTitleActive: {
-    color: '#1D4ED8',
-  },
-  countChip: {
-    backgroundColor: '#E2E8F0',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 999,
-  },
-  countChipActive: {
-    backgroundColor: '#DBEAFE',
-  },
-  countChipText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#475569',
-  },
-  countChipTextActive: {
-    color: '#1D4ED8',
-  },
-  roleTabDesc: {
-    fontSize: 12,
-    color: '#64748B',
-    lineHeight: 17,
-  },
-  roleTabDescActive: {
-    color: '#1E40AF',
-  },
-  identityList: {
-    gap: 10,
-    marginBottom: 16,
-  },
-  identityCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-    gap: 12,
-  },
-  identityCardSelected: {
-    borderColor: '#2563EB',
-    backgroundColor: '#F8FAFC',
-  },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#2563EB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#2563EB',
-  },
-  identityBody: {
-    flex: 1,
-  },
-  identityName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 2,
-  },
-  identityNameSelected: {
-    color: '#1D4ED8',
-  },
-  identitySub: {
-    fontSize: 13,
-    color: '#64748B',
-  },
-  rolePill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  rolePillAsisten: {
-    backgroundColor: '#EDE9FE',
-  },
-  rolePillPraktikan: {
-    backgroundColor: '#DCFCE7',
-  },
-  rolePillText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  rolePillTextAsisten: {
-    color: '#6D28D9',
-  },
-  rolePillTextPraktikan: {
-    color: '#15803D',
-  },
-  submitButton: {
-    backgroundColor: '#2563EB',
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  submitButtonDisabled: {
-    backgroundColor: '#94A3B8',
-  },
-  submitButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  buttonPressed: {
-    opacity: 0.88,
-  },
-  emptyBox: {
-    padding: 20,
-    borderRadius: 12,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignItems: 'center',
     marginBottom: 14,
   },
-  emptyBoxText: {
-    color: '#64748B',
-    fontSize: 13,
-  },
-  guideCard: {
-    backgroundColor: '#F1F5F9',
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 6,
-  },
-  guideTitle: {
-    fontSize: 13,
+  modalTitle: {
+    fontSize: 17,
     fontWeight: '700',
-    color: '#334155',
-    marginBottom: 2,
+    color: '#0F172A',
   },
-  guideStep: {
+  closeModalBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  closeModalText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  modalList: {
+    marginBottom: 10,
+  },
+  groupHeading: {
     fontSize: 12,
-    color: '#475569',
-    lineHeight: 18,
+    fontWeight: '700',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  dummyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderColor: '#F1F5F9',
+    gap: 10,
+  },
+  dummyInfo: {
+    flex: 1,
+  },
+  dummyName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  dummyMeta: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  dummyActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  fillBtn: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  fillBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  directLoginBtn: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  directLoginText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

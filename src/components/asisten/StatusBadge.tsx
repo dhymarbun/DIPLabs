@@ -19,14 +19,14 @@ const STATUS_CONFIG: Record<
     border: '#FDE68A',
   },
   open: {
-    label: 'Sedang Dibuka',
+    label: 'Dibuka',
     bg: '#DCFCE7',
     text: '#166534',
     dot: '#22C55E',
     border: '#BBF7D0',
   },
   closed: {
-    label: 'Sudah Ditutup',
+    label: 'Ditutup',
     bg: '#F1F5F9',
     text: '#475569',
     dot: '#64748B',

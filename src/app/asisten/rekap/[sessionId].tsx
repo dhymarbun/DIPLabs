@@ -17,15 +17,10 @@ import { formatCheckInTime } from '../[sessionId]';
 export default function AsistenSessionRecapScreen() {
   const router = useRouter();
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
-  const {
-    sessions,
-    students,
-    closeSession,
-    getAttendanceForSession,
-  } = useAttendance();
+  const { sessions, students, closeSession, getAttendanceForSession } =
+    useAttendance();
 
   const [confirmCloseVisible, setConfirmCloseVisible] = useState(false);
-  const [closedBanner, setClosedBanner] = useState(false);
 
   const session = useMemo(
     () => sessions.find((s) => s.id === sessionId),
@@ -47,13 +42,13 @@ export default function AsistenSessionRecapScreen() {
   if (!session) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.notFoundContainer}>
-          <Text style={styles.notFoundTitle}>Rekap Sesi Tidak Ditemukan</Text>
+        <View style={styles.notFound}>
+          <Text style={styles.notFoundText}>Data sesi tidak ditemukan.</Text>
           <Pressable
             onPress={() => router.replace('/asisten')}
-            style={styles.backButton}
+            style={styles.backBtn}
           >
-            <Text style={styles.backButtonText}>← Kembali ke Jadwal Asisten</Text>
+            <Text style={styles.backBtnText}>Kembali</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -64,12 +59,6 @@ export default function AsistenSessionRecapScreen() {
   const presentCount = sessionRecords.length;
   const absentCount = Math.max(0, totalRegistered - presentCount);
 
-  const handleConfirmClose = () => {
-    closeSession(session.id);
-    setConfirmCloseVisible(false);
-    setClosedBanner(true);
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -77,41 +66,28 @@ export default function AsistenSessionRecapScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.container}>
-          {closedBanner ? (
-            <View style={styles.closedBanner}>
-              <Text style={styles.closedBannerText}>
-                Sesi praktikum telah ditutup. Rekap presensi di bawah bersifat
-                final untuk sesi ini.
-              </Text>
-            </View>
-          ) : null}
-
-          {/* Header Summary Card */}
           <View style={styles.card}>
             <View style={styles.topRow}>
-              <Text style={styles.classTag}>Kelas {session.className}</Text>
+              <Text style={styles.classTag}>{session.className}</Text>
               <StatusBadge status={session.status} />
             </View>
             <Text style={styles.title}>{session.practicalName}</Text>
             <Text style={styles.subtitle}>
-              {formatIndonesianDate(session.date)} • {session.startTime} –{' '}
+              {formatIndonesianDate(session.date)} • {session.startTime}–
               {session.endTime} WIB
             </Text>
-            {session.room ? (
-              <Text style={styles.subtitle}>{session.room}</Text>
-            ) : null}
 
             <View style={styles.metricsRow}>
-              <View style={[styles.metricBox, styles.metricPresent]}>
-                <Text style={styles.metricValuePresent}>{presentCount}</Text>
-                <Text style={styles.metricLabel}>Sudah Presensi</Text>
+              <View style={styles.metricBox}>
+                <Text style={styles.metricPresent}>{presentCount}</Text>
+                <Text style={styles.metricLabel}>Hadir</Text>
               </View>
-              <View style={[styles.metricBox, styles.metricAbsent]}>
-                <Text style={styles.metricValueAbsent}>{absentCount}</Text>
+              <View style={styles.metricBox}>
+                <Text style={styles.metricAbsent}>{absentCount}</Text>
                 <Text style={styles.metricLabel}>Belum Hadir</Text>
               </View>
               <View style={styles.metricBox}>
-                <Text style={styles.metricValueTotal}>{totalRegistered}</Text>
+                <Text style={styles.metricTotal}>{totalRegistered}</Text>
                 <Text style={styles.metricLabel}>Terdaftar</Text>
               </View>
             </View>
@@ -119,38 +95,24 @@ export default function AsistenSessionRecapScreen() {
             {session.status === 'open' ? (
               <Pressable
                 onPress={() => setConfirmCloseVisible(true)}
-                style={({ pressed }) => [
-                  styles.closeSessionBtn,
-                  pressed && styles.buttonPressed,
-                ]}
+                style={styles.closeBtn}
               >
-                <Text style={styles.closeSessionBtnText}>
-                  Tutup Sesi Praktikum Sekarang
-                </Text>
+                <Text style={styles.closeBtnText}>Tutup Sesi</Text>
               </Pressable>
             ) : null}
           </View>
 
-          {/* Chronological Attendance Log */}
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>
-              Log Waktu Kehadiran ({sessionRecords.length})
-            </Text>
-            <Text style={styles.sectionSub}>
-              Diurutkan berdasarkan waktu presensi praktikan
+              Praktikan Hadir ({sessionRecords.length})
             </Text>
 
             {sessionRecords.length === 0 ? (
-              <View style={styles.emptyBox}>
-                <Text style={styles.emptyTitle}>
-                  Belum Ada Catatan Kehadiran
-                </Text>
-                <Text style={styles.emptyDesc}>
-                  Belum ada praktikan yang melakukan presensi pada sesi ini.
-                </Text>
-              </View>
+              <Text style={styles.emptyText}>
+                Belum ada catatan presensi pada sesi ini.
+              </Text>
             ) : (
-              <View style={styles.listContainer}>
+              <View style={styles.list}>
                 {sessionRecords.map((record, idx) => {
                   const student = students.find(
                     (s) => s.id === record.studentId
@@ -158,87 +120,38 @@ export default function AsistenSessionRecapScreen() {
                   return (
                     <View
                       key={`${record.sessionId}-${record.studentId}`}
-                      style={styles.logRow}
+                      style={styles.row}
                     >
-                      <View style={styles.logNumberBadge}>
-                        <Text style={styles.logNumberText}>{idx + 1}</Text>
-                      </View>
-                      <View style={styles.logInfo}>
-                        <Text style={styles.logName}>{record.studentName}</Text>
-                        <Text style={styles.logMeta}>
-                          NIM: {student?.nim ?? record.studentId} • Kelas:{' '}
-                          {student?.className ?? session.className}
+                      <Text style={styles.rowNo}>{idx + 1}.</Text>
+                      <View style={styles.rowMain}>
+                        <Text style={styles.rowName}>{record.studentName}</Text>
+                        <Text style={styles.rowSub}>
+                          {student?.nim ?? record.studentId}
                         </Text>
                       </View>
-                      <View style={styles.logTimePill}>
-                        <Text style={styles.logTimeText}>
-                          {formatCheckInTime(record.checkedInAt)}
-                        </Text>
-                      </View>
+                      <Text style={styles.rowTime}>
+                        {formatCheckInTime(record.checkedInAt)}
+                      </Text>
                     </View>
                   );
                 })}
               </View>
             )}
           </View>
-
-          {/* Full Class Roster Status */}
-          {registeredParticipants.length > 0 ? (
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>
-                Status Peserta Terdaftar ({registeredParticipants.length})
-              </Text>
-              <Text style={styles.sectionSub}>
-                Perbandingan daftar peserta kelas dengan catatan presensi
-              </Text>
-
-              <View style={styles.listContainer}>
-                {registeredParticipants.map((participant) => {
-                  const attendanceRecord = sessionRecords.find(
-                    (r) => r.studentId === participant.id
-                  );
-                  const isPresent = Boolean(attendanceRecord);
-
-                  return (
-                    <View key={participant.id} style={styles.rosterRow}>
-                      <View style={styles.logInfo}>
-                        <Text style={styles.logName}>{participant.name}</Text>
-                        <Text style={styles.logMeta}>
-                          NIM: {participant.nim ?? '-'} • Kelas:{' '}
-                          {participant.className ?? '-'}
-                        </Text>
-                      </View>
-                      {isPresent && attendanceRecord ? (
-                        <View style={styles.presentBadge}>
-                          <Text style={styles.presentBadgeText}>
-                            Hadir •{' '}
-                            {formatCheckInTime(attendanceRecord.checkedInAt)}
-                          </Text>
-                        </View>
-                      ) : (
-                        <View style={styles.absentBadge}>
-                          <Text style={styles.absentBadgeText}>
-                            Belum Presensi
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  );
-                })}
-              </View>
-            </View>
-          ) : null}
         </View>
       </ScrollView>
 
       <ConfirmActionModal
         visible={confirmCloseVisible}
-        title="Tutup Sesi Praktikum?"
-        description={`Apakah Anda yakin ingin menutup sesi "${session.practicalName}"? Setelah ditutup, praktikan tidak dapat lagi melakukan presensi.`}
-        confirmLabel="Ya, Tutup Sesi"
+        title="Tutup Sesi?"
+        description={`Tutup presensi untuk ${session.practicalName}?`}
+        confirmLabel="Tutup"
         confirmTone="danger"
         onCancel={() => setConfirmCloseVisible(false)}
-        onConfirm={handleConfirmClose}
+        onConfirm={() => {
+          closeSession(session.id);
+          setConfirmCloseVisible(false);
+        }}
       />
     </SafeAreaView>
   );
@@ -250,31 +163,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   scrollContent: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    padding: 16,
     alignItems: 'center',
   },
   container: {
     width: '100%',
-    maxWidth: 680,
-    gap: 16,
-  },
-  closedBanner: {
-    backgroundColor: '#F1F5F9',
-    borderColor: '#CBD5E1',
-    borderWidth: 1,
-    padding: 14,
-    borderRadius: 12,
-  },
-  closedBannerText: {
-    color: '#334155',
-    fontSize: 13,
-    fontWeight: '600',
+    maxWidth: 640,
+    gap: 14,
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 18,
+    borderRadius: 12,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -282,220 +182,137 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   classTag: {
     fontSize: 12,
     fontWeight: '700',
     color: '#1D4ED8',
     backgroundColor: '#EFF6FF',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#0F172A',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   subtitle: {
     fontSize: 13,
     color: '#64748B',
-    marginBottom: 2,
   },
   metricsRow: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 16,
+    marginTop: 14,
   },
   metricBox: {
     flex: 1,
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 10,
+    padding: 10,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   metricPresent: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#BBF7D0',
-  },
-  metricAbsent: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-  },
-  metricValuePresent: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#166534',
   },
-  metricValueAbsent: {
-    fontSize: 20,
-    fontWeight: '800',
+  metricAbsent: {
+    fontSize: 18,
+    fontWeight: '700',
     color: '#991B1B',
   },
-  metricValueTotal: {
-    fontSize: 20,
-    fontWeight: '800',
+  metricTotal: {
+    fontSize: 18,
+    fontWeight: '700',
     color: '#0F172A',
   },
   metricLabel: {
     fontSize: 11,
     color: '#64748B',
     marginTop: 2,
-    fontWeight: '600',
   },
-  closeSessionBtn: {
-    marginTop: 16,
+  closeBtn: {
+    marginTop: 14,
     backgroundColor: '#DC2626',
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 10,
+    borderRadius: 8,
     alignItems: 'center',
   },
-  closeSessionBtnText: {
+  closeBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#0F172A',
-    marginBottom: 2,
+    marginBottom: 10,
   },
-  sectionSub: {
-    fontSize: 12,
+  emptyText: {
+    fontSize: 13,
     color: '#64748B',
-    marginBottom: 14,
+    paddingVertical: 8,
   },
-  emptyBox: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+  list: {
+    gap: 8,
   },
-  emptyTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#334155',
-    marginBottom: 4,
-  },
-  emptyDesc: {
-    fontSize: 12,
-    color: '#64748B',
-    textAlign: 'center',
-  },
-  listContainer: {
-    gap: 10,
-  },
-  logRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderColor: '#F1F5F9',
+    gap: 8,
   },
-  logNumberBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#DBEAFE',
-    justifyContent: 'center',
-    alignItems: 'center',
+  rowNo: {
+    fontSize: 13,
+    color: '#64748B',
+    width: 22,
   },
-  logNumberText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1D4ED8',
-  },
-  logInfo: {
+  rowMain: {
     flex: 1,
   },
-  logName: {
+  rowName: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  logMeta: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  logTimePill: {
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  logTimeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#166534',
-  },
-  rosterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 10,
-  },
-  presentBadge: {
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  presentBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#166534',
-  },
-  absentBadge: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  absentBadgeText: {
-    fontSize: 12,
     fontWeight: '600',
+    color: '#0F172A',
+  },
+  rowSub: {
+    fontSize: 12,
     color: '#64748B',
   },
-  buttonPressed: {
-    opacity: 0.85,
+  rowTime: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#166534',
   },
-  notFoundContainer: {
+  notFound: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: 20,
+    gap: 12,
   },
-  notFoundTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 14,
+  notFoundText: {
+    fontSize: 15,
+    color: '#475569',
   },
-  backButton: {
+  backBtn: {
     backgroundColor: '#2563EB',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
-  backButtonText: {
+  backBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

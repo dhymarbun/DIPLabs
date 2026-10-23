@@ -19,20 +19,20 @@ export function formatIndonesianDate(isoDate: string): string {
   if (Number.isNaN(dateObj.getTime())) return isoDate;
 
   const months = [
-    'Januari',
-    'Februari',
-    'Maret',
-    'April',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
     'Mei',
-    'Juni',
-    'Juli',
-    'Agustus',
-    'September',
-    'Oktober',
-    'November',
-    'Desember',
+    'Jun',
+    'Jul',
+    'Agu',
+    'Sep',
+    'Okt',
+    'Nov',
+    'Des',
   ];
-  const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
   return `${days[dateObj.getDay()]}, ${day} ${months[month]} ${year}`;
 }
 
@@ -50,7 +50,7 @@ export function SessionCard({
     >
       <View style={styles.topRow}>
         <View style={styles.classBadge}>
-          <Text style={styles.classBadgeText}>Kelas {session.className}</Text>
+          <Text style={styles.classBadgeText}>{session.className}</Text>
         </View>
         <StatusBadge status={session.status} size="sm" />
       </View>
@@ -59,20 +59,15 @@ export function SessionCard({
 
       <View style={styles.metaContainer}>
         <View style={styles.metaRow}>
-          <Text style={styles.metaLabel}>Tanggal</Text>
+          <Text style={styles.metaLabel}>Jadwal</Text>
           <Text style={styles.metaValue}>
-            {formatIndonesianDate(session.date)}
-          </Text>
-        </View>
-        <View style={styles.metaRow}>
-          <Text style={styles.metaLabel}>Waktu</Text>
-          <Text style={styles.metaValue}>
-            {session.startTime} – {session.endTime} WIB
+            {formatIndonesianDate(session.date)} • {session.startTime}–
+            {session.endTime}
           </Text>
         </View>
         {session.room ? (
           <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Lokasi</Text>
+            <Text style={styles.metaLabel}>Ruangan</Text>
             <Text style={styles.metaValue}>{session.room}</Text>
           </View>
         ) : null}
@@ -85,14 +80,11 @@ export function SessionCard({
       </View>
 
       <View style={styles.footer}>
-        <View style={styles.attendancePill}>
-          <Text style={styles.attendanceCountText}>
-            {attendanceCount}
-            {totalParticipants > 0 ? ` / ${totalParticipants}` : ''} Praktikan
-            Hadir
-          </Text>
-        </View>
-        <Text style={styles.detailLink}>Kelola Sesi →</Text>
+        <Text style={styles.attendanceCountText}>
+          {attendanceCount}
+          {totalParticipants > 0 ? `/${totalParticipants}` : ''} hadir
+        </Text>
+        <Text style={styles.detailLink}>Detail →</Text>
       </View>
     </Pressable>
   );
@@ -101,35 +93,27 @@ export function SessionCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
   },
   cardPressed: {
-    opacity: 0.92,
+    opacity: 0.9,
     backgroundColor: '#F8FAFC',
   },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
-    flexWrap: 'wrap',
+    marginBottom: 8,
     gap: 8,
   },
   classBadge: {
     backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   classBadgeText: {
@@ -138,14 +122,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   title: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#0F172A',
-    lineHeight: 22,
-    marginBottom: 12,
+    lineHeight: 21,
+    marginBottom: 10,
   },
   metaContainer: {
-    gap: 6,
+    gap: 5,
     paddingVertical: 10,
     borderTopWidth: 1,
     borderBottomWidth: 1,
@@ -154,13 +138,11 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
     gap: 12,
   },
   metaLabel: {
     fontSize: 13,
     color: '#64748B',
-    minWidth: 64,
   },
   metaValue: {
     fontSize: 13,
@@ -173,24 +155,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 12,
-  },
-  attendancePill: {
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    marginTop: 10,
   },
   attendanceCountText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#334155',
+    color: '#475569',
   },
   detailLink: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#2563EB',
   },
 });
