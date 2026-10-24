@@ -14,20 +14,38 @@ import { useAttendance } from '../../context/AttendanceContext';
 export default function PraktikanScheduleScreen() {
   const router = useRouter();
   const navigation = useNavigation();
-  const { currentUser, sessions } = useAttendance();
+  const { currentUser, sessions, getAttendanceForStudent } = useAttendance();
 
   useEffect(() => {
     navigation.setOptions({ title: 'Jadwal Praktikum' });
   }, [navigation]);
 
+  const myRecords = useMemo(() => {
+    if (!currentUser) return [];
+    return getAttendanceForStudent(currentUser.id);
+  }, [currentUser, getAttendanceForStudent]);
+
   const isPraktikan = currentUser?.role === 'praktikan';
 
-  const mySessions = useMemo(() => {
+  const baseSessions = useMemo(() => {
     if (!isPraktikan || !currentUser) return [];
     return sessions.filter(
       (session) => session.participantIds?.includes(currentUser.id) ?? false
     );
   }, [isPraktikan, currentUser, sessions]);
+
+  type FilterType = 'all' | 'upcoming' | 'open' | 'closed';
+  const FILTER_OPTIONS: { key: FilterType; label: string }[] = [
+    { key: 'all', label: 'Semua' },
+    { key: 'open', label: 'Dibuka' },
+    { key: 'upcoming', label: 'Belum Dibuka' },
+    { key: 'closed', label: 'Ditutup' },
+  ];
+  const [selectedFilter, setSelectedFilter] = React.useState<FilterType>('all');
+  const filteredSessions = React.useMemo(() => {
+    if (selectedFilter === 'all') return baseSessions;
+    return baseSessions.filter((s) => s.status === selectedFilter);
+  }, [baseSessions, selectedFilter]);
 
   if (!isPraktikan || !currentUser) {
     return (
@@ -75,22 +93,70 @@ export default function PraktikanScheduleScreen() {
             </Pressable>
           </View>
 
-          {mySessions.length === 0 ? (
+          {/* Filter Chips */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+          >
+            {FILTER_OPTIONS.map((item) => {
+              const isActive = selectedFilter === item.key;
+              return (
+                <Pressable
+                  key={item.key}
+                  onPress={() => setSelectedFilter(item.key)}
+                  style={[styles.filterChip, isActive && styles.filterChipActive]}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      isActive && styles.filterChipTextActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          {filteredSessions.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>Belum ada jadwal</Text>
+              <Text style={styles.emptyTitle}>
+                {selectedFilter === 'all'
+                  ? 'Belum ada jadwal'
+                  : 'Tidak ada jadwal'}
+              </Text>
               <Text style={styles.emptySubtitle}>
-                Anda belum terdaftar pada sesi praktikum mana pun.
+                {selectedFilter === 'all'
+                  ? 'Anda belum terdaftar pada sesi praktikum mana pun.'
+                  : `Belum ada sesi dengan status ${
+                      FILTER_OPTIONS.find((f) => f.key === selectedFilter)?.label
+                    }.`}
               </Text>
             </View>
           ) : (
             <View>
-              {mySessions.map((session) => (
-                <PraktikanSessionCard
-                  key={session.id}
-                  session={session}
-                  onPress={() => router.push(`/praktikan/${session.id}`)}
-                />
-              ))}
+              {filteredSessions.map((session) => {
+                const hasRecorded = myRecords.some(
+                  (r) => r.sessionId === session.id
+                );
+                let footerNote = 'Sesi ditutup';
+                if (session.status === 'open') {
+                  footerNote = hasRecorded ? 'Sudah presensi' : 'Siap presensi';
+                } else if (session.status === 'upcoming') {
+                  footerNote = 'Belum dibuka';
+                }
+
+                return (
+                  <PraktikanSessionCard
+                    key={session.id}
+                    session={session}
+                    footerNote={footerNote}
+                    onPress={() => router.push(`/praktikan/${session.id}`)}
+                  />
+                );
+              })}
             </View>
           )}
         </View>
@@ -138,6 +204,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  filterChipActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
   },
   logoutBtnText: {
     fontSize: 12,
