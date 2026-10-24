@@ -263,4 +263,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  pressed: {
+    opacity: 0.85,
+  },
 });
