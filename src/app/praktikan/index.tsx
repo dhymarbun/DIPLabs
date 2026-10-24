@@ -93,6 +93,22 @@ export default function PraktikanScheduleScreen() {
             </Pressable>
           </View>
 
+          <Pressable
+            onPress={() => router.push('/praktikan/riwayat')}
+            style={({ pressed }) => [
+              styles.historyBtn,
+              pressed && styles.pressed,
+            ]}
+          >
+            <View>
+              <Text style={styles.historyLabel}>Riwayat Presensi</Text>
+              <Text style={styles.historySub}>
+                {myRecords.length} sesi tercatat
+              </Text>
+            </View>
+            <Text style={styles.historyLink}>Lihat →</Text>
+          </Pressable>
+
           {/* Filter Chips */}
           <ScrollView
             horizontal
@@ -233,6 +249,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#334155',
+  },
+  historyBtn: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  historyLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E3A8A',
+  },
+  historySub: {
+    fontSize: 12,
+    color: '#2563EB',
+    marginTop: 2,
+  },
+  historyLink: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#2563EB',
   },
   pressed: {
     opacity: 0.85,
