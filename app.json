@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "DIPLabs",
+    "slug": "diplabs",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "diplabs",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.itsmeverity.diplabs"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-asset"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "85c618a8-91d3-43e2-8dca-09860386467c"
+      }
+    }
+  }
+}
