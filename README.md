@@ -1,5 +1,7 @@
 # DIPLabs
 
+# PERTEMUAN 1
+
 Aplikasi mobile untuk mengelola sesi dan presensi praktikum. Asisten
 dapat membuka dan menutup sesi praktikum serta melihat rekap kehadiran,
 sementara praktikan dapat melihat jadwal, melakukan presensi ketika sesi
@@ -232,3 +234,157 @@ src/
 
 Nama atau struktur file dapat mengikuti implementasi aktual selama rute
 dan kontrak integrasi yang disepakati tetap dipertahankan.
+
+# PERTEMUAN 2
+
+Sprint 2 — Data Dinamis dengan Firebase
+
+Pada sprint sebelumnya, aplikasi telah memiliki antarmuka dan alur
+pengelolaan kegiatan praktikum menggunakan data lokal/dummy. Namun, data
+yang digunakan belum tersimpan secara permanen dan belum terhubung antar
+pengguna. Akibatnya, perubahan yang dilakukan oleh praktikan belum tentu
+terlihat oleh asisten, begitu pula sebaliknya.
+
+Kini aplikasi perlu dikembangkan agar dapat digunakan oleh banyak
+pengguna dengan akun masing-masing. Praktikan dan asisten harus dapat
+mengakses data yang sama secara real-time, dengan informasi dan tindakan
+yang disesuaikan berdasarkan peran pengguna. Selain itu, praktikan yang
+berhalangan mengikuti kegiatan praktikum membutuhkan fasilitas pengajuan
+izin yang dapat diperiksa oleh asisten dengan bantuan Artificial
+Intelligence (AI).
+
+Pada sprint ini, kembangkan aplikasi React Native dari sprint
+sebelumnya dengan mengintegrasikan Firebase Authentication untuk
+pengelolaan akun, Cloud Firestore untuk penyimpanan dan sinkronisasi
+data, serta model AI yang disediakan pengajar melalui API.
+
+## User Story
+
+  -----------------------------------------------------------------------
+  ID                      Aktor                   User Story
+  ----------------------- ----------------------- -----------------------
+  US-10                   Pengguna                Melakukan registrasi,
+                                                  login, dan logout
+                                                  menggunakan Firebase
+                                                  Authentication.
+
+  US-11                   Asisten                 Mengelola data praktikum
+                                                  (tambah, lihat, ubah,
+                                                  hapus) terhadap data
+                                                  kelas, peserta, jadwal,
+                                                  dan sesi di Firestore.
+
+  US-12                   Praktikan               Melihat jadwal dan
+                                                  informasi sesi yang
+                                                  relevan secara real-time
+                                                  dari Firestore.
+
+  US-13                   Praktikan               Melakukan presensi yang
+                                                  tersinkronisasi secara
+                                                  real-time dengan
+                                                  Firestore dan mencegah
+                                                  presensi ganda.
+
+  US-14                   Praktikan               Mengajukan izin untuk
+                                                  sesi tertentu dengan
+                                                  mengisi alasan
+                                                  ketidakhadiran.
+
+  US-15                   Sistem                  Mengirimkan alasan izin
+                                                  ke API model AI untuk
+                                                  mendapatkan prediksi
+                                                  kategori alasan.
+
+  US-16                   Asisten                 Melihat daftar pengajuan
+                                                  izin beserta alasan dan
+                                                  hasil klasifikasi AI.
+
+  US-17                   Asisten                 Menerima atau menolak
+                                                  pengajuan izin dan
+                                                  menyimpan keputusan di
+                                                  Firestore.
+
+  US-18                   Praktikan               Memantau status
+                                                  pengajuan izin (proses,
+                                                  diterima, atau ditolak)
+                                                  secara real-time.
+
+  US-19                   Pengguna                Akses dan perubahan data
+                                                  dibatasi sesuai
+                                                  identitas serta peran
+                                                  melalui Firebase
+                                                  Security Rules.
+  -----------------------------------------------------------------------
+
+## Requirement
+
+-   Node.js dan npm
+-   Expo CLI melalui `npx expo`
+-   React Native
+-   TypeScript
+-   Expo Router
+-   Firebase Project (Firebase Authentication & Cloud Firestore)
+-   API Model AI (disediakan pengajar)
+-   Koneksi internet untuk sinkronisasi data real-time
+
+## Data dan Penyimpanan
+
+Sprint ini menggunakan data dinamis yang disimpan secara terpusat dan
+tersinkronisasi secara real-time.
+
+-   **Firebase Authentication**: Menyimpan kredensial dan menjadi
+    sumber identitas pengguna.
+-   **Cloud Firestore**: Menyimpan data kelas, jadwal, sesi, catatan
+    presensi, serta pengajuan izin secara terstruktur.
+-   **Real-time Synchronization**: Memanfaatkan Firestore real-time
+    listeners agar perubahan data langsung terlihat lintas perangkat
+    tanpa perlu memuat ulang aplikasi.
+-   **Data Persistence**: Seluruh perubahan tersimpan permanen dan
+    tetap ada saat aplikasi ditutup lalu dibuka kembali.
+
+## Role & Alur Singkat
+
+  -----------------------------------------------------------------------
+  Role                                Yang bisa dilakukan
+  ----------------------------------- -----------------------------------
+  Pengguna (Auth)                     Melakukan registrasi akun baru,
+                                      login, dan logout menggunakan
+                                      Firebase Auth.
+
+  Praktikan                           Melihat jadwal real-time,
+                                      melakukan presensi saat sesi
+                                      terbuka, mengajukan izin beserta
+                                      alasan, dan memantau status izin.
+
+  Asisten                             Mengelola data praktikum (CRUD),
+                                      membuka/menutup sesi, memeriksa
+                                      rekap presensi real-time, serta
+                                      memeriksa dan memutuskan permohonan
+                                      izin dengan bantuan klasifikasi AI.
+  -----------------------------------------------------------------------
+
+### Alur demo wajib
+
+**Alur 1: Presensi Real-Time**
+1.  Asisten login ke dalam aplikasi.
+2.  Asisten memilih sesi praktikum dan membuka sesi.
+3.  Praktikan login di perangkat/sesi lain dan memilih sesi yang sama.
+4.  Praktikan melakukan presensi.
+5.  Catatan kehadiran tersimpan ke Firestore secara real-time.
+6.  Asisten melihat rekap kehadiran ter-update secara otomatis tanpa reload.
+7.  Asisten menutup sesi praktikum.
+
+**Alur 2: Pengajuan Izin dengan Klasifikasi AI**
+1.  Praktikan login dan memilih sesi yang tidak dapat dihadiri.
+2.  Praktikan mengajukan izin dengan mengisi alasan ketidakhadiran.
+3.  Aplikasi memanggil API Model AI untuk mendapatkan prediksi kategori alasan.
+4.  Data izin beserta prediksi AI tersimpan di Firestore dengan status awal pending/proses.
+5.  Asisten membuka daftar pengajuan izin, melihat alasan dan label klasifikasi AI.
+6.  Asisten mengambil keputusan untuk menerima atau menolak izin.
+7.  Praktikan melihat status pengajuan izinnya ter-update secara real-time.
+
+## Validasi dan Keamanan
+
+-   **Penanganan Error**: Menangani input tidak valid, kegagalan login/registrasi, gangguan jaringan Firestore, serta kondisi saat API AI tidak merespons (fallback).
+-   **Firebase Security Rules**: Membatasi hak baca dan tulis dokumen di Firestore berdasarkan autentikasi dan peran (role) pengguna.
+-   **Independensi Keputusan**: Prediksi model AI hanya menjadi acuan/informasi pendukung, keputusan akhir persetujuan izin sepenuhnya berada di tangan asisten.
