@@ -1,0 +1,89 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAsisten() {
+      return isSignedIn() && (
+        request.auth.token.role == 'asisten' ||
+        getUserData().role == 'asisten'
+      );
+    }
+
+    function isPraktikan() {
+      return isSignedIn() && (
+        request.auth.token.role == 'praktikan' ||
+        getUserData().role == 'praktikan'
+      );
+    }
+
+    // users/{uid}
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role in ['asisten', 'praktikan']
+        && request.resource.data.name is string
+        && request.resource.data.email is string;
+      allow update: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role == resource.data.role;
+      allow delete: if false;
+    }
+
+    // classes/{classId}
+    match /classes/{classId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAsisten();
+    }
+
+    // participants/{participantDocId} ({classId}_{studentId})
+    match /participants/{participantDocId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAsisten();
+    }
+
+    // sessions/{sessionId}
+    match /sessions/{sessionId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAsisten();
+    }
+
+    // attendance/{attendanceDocId} ({sessionId}_{studentId})
+    match /attendance/{attendanceDocId} {
+      allow read: if isSignedIn();
+      allow create: if isPraktikan()
+        && request.resource.data.studentId == request.auth.uid
+        && attendanceDocId == (request.resource.data.sessionId + '_' + request.auth.uid)
+        && !exists(/databases/$(database)/documents/attendance/$(attendanceDocId))
+        && get(/databases/$(database)/documents/sessions/$(request.resource.data.sessionId)).data.status == 'open';
+      allow update, delete: if false;
+    }
+
+    // permissionRequests/{requestId}
+    match /permissionRequests/{requestId} {
+      allow read: if isSignedIn() && (
+        isAsisten() ||
+        resource.data.studentId == request.auth.uid
+      );
+      allow create: if isPraktikan()
+        && request.resource.data.studentId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() > 0;
+      allow update: if isAsisten()
+        && request.resource.data.status in ['approved', 'rejected']
+        && request.resource.data.studentId == resource.data.studentId
+        && request.resource.data.sessionId == resource.data.sessionId
+        && request.resource.data.reason == resource.data.reason;
+      allow delete: if isAsisten();
+    }
+  }
+}

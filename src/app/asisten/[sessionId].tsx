@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -27,6 +28,7 @@ export default function AsistenSessionDetailScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const {
     sessions,
+    sessionsLoading,
     students,
     openSession,
     closeSession,
@@ -36,7 +38,11 @@ export default function AsistenSessionDetailScreen() {
   const [pendingAction, setPendingAction] = useState<'open' | 'close' | null>(
     null
   );
-  const [notice, setNotice] = useState<string | null>(null);
+  const [processing, setProcessing] = useState<boolean>(false);
+  const [notice, setNotice] = useState<{
+    tone: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   const session = useMemo(
     () => sessions.find((s) => s.id === sessionId),
@@ -49,6 +55,17 @@ export default function AsistenSessionDetailScreen() {
       a.checkedInAt.localeCompare(b.checkedInAt)
     );
   }, [session, getAttendanceForSession]);
+
+  if (sessionsLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.notFound}>
+          <ActivityIndicator size="large" color="#2563EB" />
+          <Text style={styles.notFoundText}>Memuat detail sesi...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!session) {
     return (
@@ -68,15 +85,36 @@ export default function AsistenSessionDetailScreen() {
 
   const totalParticipants = session.participantIds?.length ?? 0;
 
-  const handleConfirmAction = () => {
-    if (pendingAction === 'open') {
-      openSession(session.id);
-      setNotice('Sesi dibuka. Praktikan sudah bisa melakukan presensi.');
-    } else if (pendingAction === 'close') {
-      closeSession(session.id);
-      setNotice('Sesi ditutup.');
-    }
+  const handleConfirmAction = async () => {
+    if (!pendingAction) return;
+    const actionToRun = pendingAction;
     setPendingAction(null);
+    setProcessing(true);
+    try {
+      if (actionToRun === 'open') {
+        await openSession(session.id);
+        setNotice({
+          tone: 'success',
+          text: 'Sesi dibuka. Praktikan sudah bisa melakukan presensi.',
+        });
+      } else {
+        await closeSession(session.id);
+        setNotice({
+          tone: 'success',
+          text: 'Sesi ditutup.',
+        });
+      }
+    } catch (err) {
+      setNotice({
+        tone: 'error',
+        text:
+          err instanceof Error
+            ? err.message
+            : 'Gagal mengubah status sesi di Firestore.',
+      });
+    } finally {
+      setProcessing(false);
+    }
   };
 
   return (
@@ -87,8 +125,20 @@ export default function AsistenSessionDetailScreen() {
       >
         <View style={styles.container}>
           {notice ? (
-            <View style={styles.noticeBox}>
-              <Text style={styles.noticeText}>{notice}</Text>
+            <View
+              style={[
+                styles.noticeBox,
+                notice.tone === 'error' && styles.noticeBoxError,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.noticeText,
+                  notice.tone === 'error' && styles.noticeTextError,
+                ]}
+              >
+                {notice.text}
+              </Text>
             </View>
           ) : null}
 
@@ -137,11 +187,11 @@ export default function AsistenSessionDetailScreen() {
             {/* Tombol Buka / Tutup Sesi */}
             <View style={styles.actionRow}>
               <Pressable
-                disabled={session.status === 'open'}
+                disabled={session.status === 'open' || processing}
                 onPress={() => setPendingAction('open')}
                 style={[
                   styles.actionBtn,
-                  session.status === 'open'
+                  session.status === 'open' || processing
                     ? styles.btnDisabled
                     : styles.openBtn,
                 ]}
@@ -149,7 +199,8 @@ export default function AsistenSessionDetailScreen() {
                 <Text
                   style={[
                     styles.actionBtnText,
-                    session.status === 'open' && styles.btnTextDisabled,
+                    (session.status === 'open' || processing) &&
+                      styles.btnTextDisabled,
                   ]}
                 >
                   {session.status === 'open' ? 'Sedang Dibuka' : 'Buka Sesi'}
@@ -157,11 +208,11 @@ export default function AsistenSessionDetailScreen() {
               </Pressable>
 
               <Pressable
-                disabled={session.status !== 'open'}
+                disabled={session.status !== 'open' || processing}
                 onPress={() => setPendingAction('close')}
                 style={[
                   styles.actionBtn,
-                  session.status !== 'open'
+                  session.status !== 'open' || processing
                     ? styles.btnDisabled
                     : styles.closeBtn,
                 ]}
@@ -169,7 +220,8 @@ export default function AsistenSessionDetailScreen() {
                 <Text
                   style={[
                     styles.actionBtnText,
-                    session.status !== 'open' && styles.btnTextDisabled,
+                    (session.status !== 'open' || processing) &&
+                      styles.btnTextDisabled,
                   ]}
                 >
                   Tutup Sesi
@@ -265,10 +317,17 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
   },
+  noticeBoxError: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
   noticeText: {
     fontSize: 13,
     color: '#1E3A8A',
     fontWeight: '600',
+  },
+  noticeTextError: {
+    color: '#991B1B',
   },
   card: {
     backgroundColor: '#FFFFFF',
