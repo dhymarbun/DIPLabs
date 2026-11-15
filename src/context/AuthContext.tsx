@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
@@ -90,12 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               className: data.className ? String(data.className) : undefined,
             });
           } else {
-            setAuthUser({
-              uid: firebaseUser.uid,
-              name: firebaseUser.displayName ?? firebaseUser.email ?? 'Pengguna',
-              email: firebaseUser.email ?? '',
-              role: 'praktikan',
-            });
+            setAuthUser(null);
           }
           setAuthLoading(false);
         },
@@ -133,6 +129,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const profile = await fetchUserProfile(cred.user.uid);
       if (profile) {
         setAuthUser(profile);
+      } else {
+        await signOut(auth);
+        throw new Error('Profil akun belum lengkap. Hubungi administrator untuk migrasi akun.');
       }
     } catch (err) {
       throw new Error(mapFirebaseError(err));
@@ -142,8 +141,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = useCallback(async (input: RegisterInput) => {
     const name = input.name.trim();
     const email = input.email.trim();
-    const nim = input.nim?.trim();
-    const className = input.className?.trim();
+    const nim = input.nim.trim();
+    const className = input.className.trim();
 
     if (!name) {
       throw new Error('Nama lengkap wajib diisi.');
@@ -154,18 +153,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!input.password || input.password.length < 6) {
       throw new Error('Password minimal terdiri dari 6 karakter.');
     }
+    if (input.role !== 'praktikan') {
+      throw new Error('Akun asisten harus dibuat oleh administrator.');
+    }
+    if (!/^\d{8,12}$/.test(nim)) {
+      throw new Error('NIM harus berupa 8–12 digit angka.');
+    }
+    if (!className) {
+      throw new Error('Kelas wajib diisi.');
+    }
     if (!isFirebaseConfigured) {
       throw new Error(
         'Konfigurasi Firebase belum diatur di file .env (EXPO_PUBLIC_FIREBASE_*).'
       );
     }
 
+    let createdUser: Awaited<ReturnType<typeof createUserWithEmailAndPassword>>['user'] | null = null;
     try {
       const cred = await createUserWithEmailAndPassword(
         auth,
         email,
         input.password
       );
+      createdUser = cred.user;
       await updateProfile(cred.user, { displayName: name });
 
       const newUser: AuthUser = {
@@ -173,13 +183,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name,
         email,
         role: input.role,
-        nim: nim || undefined,
-        className: className || undefined,
+        nim,
+        className,
       };
 
       await saveUserProfile(newUser);
       setAuthUser(newUser);
     } catch (err) {
+      if (createdUser) {
+        await deleteUser(createdUser).catch(() => signOut(auth).catch(() => undefined));
+      }
       throw new Error(mapFirebaseError(err));
     }
   }, []);

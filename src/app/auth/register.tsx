@@ -15,7 +15,11 @@ import { UserRole } from '../../types/attendance';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { register } = useAuth();
+  const { register, authUser, authLoading } = useAuth();
+
+  React.useEffect(() => {
+    if (!authLoading && authUser) router.replace(authUser.role === 'asisten' ? '/asisten' : '/praktikan');
+  }, [authLoading, authUser, router]);
 
   const [role, setRole] = useState<UserRole>('praktikan');
   const [name, setName] = useState<string>('');
@@ -48,8 +52,8 @@ export default function RegisterScreen() {
         email: email.trim(),
         password,
         role,
-        nim: nim.trim() || undefined,
-        className: className.trim() || undefined,
+        nim: nim.trim(),
+        className: className.trim(),
       });
       router.replace(role === 'asisten' ? '/asisten' : '/praktikan');
     } catch (err) {
@@ -91,23 +95,7 @@ export default function RegisterScreen() {
                   Praktikan
                 </Text>
               </Pressable>
-              <Pressable
-                onPress={() => setRole('asisten')}
-                disabled={submitting}
-                style={[
-                  styles.segmentBtn,
-                  role === 'asisten' && styles.segmentBtnActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.segmentText,
-                    role === 'asisten' && styles.segmentTextActive,
-                  ]}
-                >
-                  Asisten
-                </Text>
-              </Pressable>
+              <Text style={styles.roleHint}>Akun asisten dibuat oleh administrator.</Text>
             </View>
 
             <View style={styles.fieldGroup}>
@@ -247,6 +235,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 4,
     marginBottom: 14,
+  },
+  roleHint: {
+    flex: 1,
+    padding: 8,
+    textAlign: 'center',
+    color: '#64748B',
+    fontSize: 12,
   },
   segmentBtn: {
     flex: 1,

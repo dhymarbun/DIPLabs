@@ -53,6 +53,9 @@ export type AttendanceRecord = {
   studentId: string;
   studentName: string;
   checkedInAt: string; // ISO timestamp
+  assistantId?: string;
+  nim?: string;
+  className?: string;
 };
 
 export type PermissionStatus = 'pending' | 'approved' | 'rejected';
@@ -70,6 +73,7 @@ export type AIClassificationResult = {
 export type PermissionRequest = {
   id: string;
   sessionId: string;
+  assistantId?: string;
   studentId: string;
   studentName: string;
   reason: string;
@@ -99,8 +103,8 @@ export type RegisterInput = {
   email: string;
   password: string;
   role: UserRole;
-  nim?: string;
-  className?: string;
+  nim: string;
+  className: string;
 };
 
 export type AuthContextValue = {

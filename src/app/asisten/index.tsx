@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SessionCard } from '../../components/asisten/SessionCard';
@@ -44,10 +45,21 @@ export default function AsistenScheduleScreen() {
     return sessions.filter((s) => s.status === selectedFilter);
   }, [sessions, selectedFilter]);
 
-  const handleLogout = async () => {
-    await logout();
-    router.replace('/auth/login');
-  };
+  const handleLogout = () => Alert.alert(
+    'Keluar dari akun?',
+    'Anda perlu masuk kembali untuk mengelola praktikum.',
+    [
+      { text: 'Batal', style: 'cancel' },
+      { text: 'Keluar', style: 'destructive', onPress: async () => {
+        try {
+          await logout();
+          router.replace('/auth/login');
+        } catch (error) {
+          Alert.alert('Logout gagal', error instanceof Error ? error.message : 'Coba lagi.');
+        }
+      } },
+    ]
+  );
 
   const handleSeed = async () => {
     setSeeding(true);
