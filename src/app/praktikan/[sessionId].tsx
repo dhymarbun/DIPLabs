@@ -5,6 +5,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
@@ -13,6 +14,7 @@ import { formatIndonesianDate } from '../../components/asisten/SessionCard';
 import { useAttendance } from '../../context/AttendanceContext';
 import { formatCheckInTime } from './riwayat';
 import { RecordAttendanceFailureReason } from '../../types/attendance';
+import { usePermissions } from '../../context/PermissionContext';
 
 const FAILURE_MESSAGES: Record<RecordAttendanceFailureReason, string> = {
   'session-not-open':
@@ -33,6 +35,10 @@ export default function PraktikanSessionDetailScreen() {
     recordAttendance,
     getAttendanceForStudent,
   } = useAttendance();
+  const { submitPermission } = usePermissions();
+  const [permissionReason, setPermissionReason] = useState('');
+  const [permissionFeedback, setPermissionFeedback] = useState<string | null>(null);
+  const [permissionSubmitting, setPermissionSubmitting] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({ title: 'Detail Sesi' });
@@ -75,6 +81,22 @@ export default function PraktikanSessionDetailScreen() {
       });
     } else {
       setFeedback({ tone: 'error', text: FAILURE_MESSAGES[result.reason] });
+    }
+  };
+
+  const handleSubmitPermission = async () => {
+    if (!session || permissionSubmitting) return;
+    setPermissionSubmitting(true);
+    setPermissionFeedback(null);
+    const result = await submitPermission(session.id, permissionReason);
+    setPermissionSubmitting(false);
+    if (result.ok) {
+      setPermissionReason('');
+      setPermissionFeedback(
+        `Pengajuan tersimpan. Kategori AI: ${result.aiClassification?.category ?? 'tidak diketahui'}. Keputusan tetap ditentukan asisten.`
+      );
+    } else {
+      setPermissionFeedback(result.error ?? 'Pengajuan izin gagal disimpan.');
     }
   };
 
@@ -235,6 +257,38 @@ export default function PraktikanSessionDetailScreen() {
               </Pressable>
             )}
           </View>
+
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Ajukan Izin</Text>
+            <Text style={styles.permissionHelp}>
+              Tulis alasan ketidakhadiran. Sistem memberi klasifikasi AI sebagai informasi pendukung;
+              keputusan akhir tetap oleh asisten.
+            </Text>
+            <TextInput
+              value={permissionReason}
+              onChangeText={setPermissionReason}
+              placeholder="Contoh: sedang sakit dan perlu istirahat"
+              multiline
+              editable={!permissionSubmitting}
+              style={styles.permissionInput}
+            />
+            {permissionFeedback ? (
+              <Text style={styles.permissionFeedback}>{permissionFeedback}</Text>
+            ) : null}
+            <Pressable
+              onPress={handleSubmitPermission}
+              disabled={permissionSubmitting || !permissionReason.trim()}
+              style={({ pressed }) => [
+                styles.permissionBtn,
+                (permissionSubmitting || !permissionReason.trim()) && styles.presensiBtnDisabled,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.presensiBtnText}>
+                {permissionSubmitting ? 'Mengirim...' : 'Kirim Pengajuan Izin'}
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -363,6 +417,34 @@ const styles = StyleSheet.create({
   },
   presensiBtnTextDisabled: {
     color: '#64748B',
+  },
+  permissionHelp: {
+    color: '#64748B',
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  permissionInput: {
+    minHeight: 84,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    padding: 12,
+    color: '#1E293B',
+    textAlignVertical: 'top',
+    marginBottom: 10,
+  },
+  permissionFeedback: {
+    color: '#475569',
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  permissionBtn: {
+    backgroundColor: '#7C3AED',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
   checkedInBox: {
     backgroundColor: '#DCFCE7',

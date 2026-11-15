@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -17,10 +18,16 @@ import { formatCheckInTime } from '../[sessionId]';
 export default function AsistenSessionRecapScreen() {
   const router = useRouter();
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
-  const { sessions, students, closeSession, getAttendanceForSession } =
-    useAttendance();
+  const {
+    sessions,
+    sessionsLoading,
+    students,
+    closeSession,
+    getAttendanceForSession,
+  } = useAttendance();
 
   const [confirmCloseVisible, setConfirmCloseVisible] = useState(false);
+  const [closing, setClosing] = useState(false);
 
   const session = useMemo(
     () => sessions.find((s) => s.id === sessionId),
@@ -38,6 +45,17 @@ export default function AsistenSessionRecapScreen() {
     if (!session?.participantIds) return [];
     return students.filter((std) => session.participantIds?.includes(std.id));
   }, [session, students]);
+
+  if (sessionsLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.notFound}>
+          <ActivityIndicator size="large" color="#2563EB" />
+          <Text style={styles.notFoundText}>Memuat rekap sesi...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!session) {
     return (
@@ -94,10 +112,13 @@ export default function AsistenSessionRecapScreen() {
 
             {session.status === 'open' ? (
               <Pressable
+                disabled={closing}
                 onPress={() => setConfirmCloseVisible(true)}
                 style={styles.closeBtn}
               >
-                <Text style={styles.closeBtnText}>Tutup Sesi</Text>
+                <Text style={styles.closeBtnText}>
+                  {closing ? 'Menutup Sesi...' : 'Tutup Sesi'}
+                </Text>
               </Pressable>
             ) : null}
           </View>
@@ -148,9 +169,14 @@ export default function AsistenSessionRecapScreen() {
         confirmLabel="Tutup"
         confirmTone="danger"
         onCancel={() => setConfirmCloseVisible(false)}
-        onConfirm={() => {
-          closeSession(session.id);
+        onConfirm={async () => {
           setConfirmCloseVisible(false);
+          setClosing(true);
+          try {
+            await closeSession(session.id);
+          } finally {
+            setClosing(false);
+          }
         }}
       />
     </SafeAreaView>
