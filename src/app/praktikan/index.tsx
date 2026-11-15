@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   SafeAreaView,
@@ -6,10 +6,12 @@ import {
   StyleSheet,
   Text,
   View,
+  Alert,
 } from 'react-native';
 import { useNavigation, useRouter } from 'expo-router';
 import { PraktikanSessionCard } from '../../components/praktikan/PraktikanSessionCard';
 import { useAttendance } from '../../context/AttendanceContext';
+import { useAuth } from '../../context/AuthContext';
 
 export default function PraktikanScheduleScreen() {
   const router = useRouter();
@@ -21,6 +23,8 @@ export default function PraktikanScheduleScreen() {
     attendanceError,
     getAttendanceForStudent,
   } = useAttendance();
+  const { logout } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({ title: 'Jadwal Praktikum' });
@@ -32,6 +36,26 @@ export default function PraktikanScheduleScreen() {
   }, [currentUser, getAttendanceForStudent]);
 
   const isPraktikan = currentUser?.role === 'praktikan';
+  const handleLogout = () => Alert.alert(
+    'Keluar dari akun?',
+    'Anda perlu masuk kembali untuk melihat data presensi.',
+    [
+      { text: 'Batal', style: 'cancel' },
+      {
+        text: 'Keluar',
+        style: 'destructive',
+        onPress: async () => {
+          setLoggingOut(true);
+          try {
+            await logout();
+            router.replace('/auth/login');
+          } finally {
+            setLoggingOut(false);
+          }
+        },
+      },
+    ]
+  );
 
   const baseSessions = useMemo(() => {
     if (!isPraktikan || !currentUser) return [];
@@ -89,13 +113,14 @@ export default function PraktikanScheduleScreen() {
               </Text>
             </View>
             <Pressable
-              onPress={() => router.replace('/')}
+              onPress={handleLogout}
+              disabled={loggingOut}
               style={({ pressed }) => [
                 styles.logoutBtn,
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.logoutBtnText}>Ganti Akun</Text>
+              <Text style={styles.logoutBtnText}>{loggingOut ? 'Keluar...' : 'Keluar'}</Text>
             </Pressable>
           </View>
 

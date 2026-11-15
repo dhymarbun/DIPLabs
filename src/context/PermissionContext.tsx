@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, doc, getDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../firebase/config';
 import { classifyPermissionReason } from '../services/ai';
 import {
@@ -48,7 +48,7 @@ export function PermissionProvider({
     const baseCollection = collection(db, 'permissionRequests');
     const q =
       authUser.role === 'asisten'
-        ? baseCollection
+        ? query(baseCollection, where('assistantId', '==', authUser.uid))
         : query(baseCollection, where('studentId', '==', authUser.uid));
 
     const unsubscribe = onSnapshot(
@@ -63,6 +63,7 @@ export function PermissionProvider({
           return {
             id: docSnap.id,
             sessionId: String(d.sessionId ?? ''),
+            assistantId: d.assistantId ? String(d.assistantId) : undefined,
             studentId: String(d.studentId ?? ''),
             studentName: String(d.studentName ?? ''),
             reason: String(d.reason ?? ''),
@@ -132,6 +133,7 @@ export function PermissionProvider({
 
       const newRequest: Omit<PermissionRequest, 'id'> = {
         sessionId,
+        assistantId: undefined,
         studentId: authUser.uid,
         studentName: authUser.name,
         reason: trimmedReason,
@@ -143,7 +145,12 @@ export function PermissionProvider({
 
       try {
         if (isFirebaseConfigured) {
-          await createPermissionDoc(newRequest);
+          const session = await getDoc(doc(db, 'sessions', sessionId));
+          const assistantId = session.data()?.assistantId;
+          if (typeof assistantId !== 'string' || !assistantId) {
+            return { ok: false, error: 'Sesi belum memiliki asisten penanggung jawab.' };
+          }
+          await createPermissionDoc({ ...newRequest, assistantId });
         } else {
           setPermissions((prev) => [
             { ...newRequest, id: `perm-${Date.now()}` },

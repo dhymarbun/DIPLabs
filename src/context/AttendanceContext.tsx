@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { collection, getDoc, doc, onSnapshot } from 'firebase/firestore';
+import { collection, getDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
 import {
   MOCK_ASSISTANTS,
   MOCK_ATTENDANCE_RECORDS,
@@ -97,8 +97,11 @@ export function AttendanceProvider({
     setSessionsLoading(true);
     setAttendanceError(null);
 
+    const sessionQuery = authUser.role === 'asisten'
+      ? query(collection(db, 'sessions'), where('assistantId', '==', authUser.uid))
+      : query(collection(db, 'sessions'), where('participantIds', 'array-contains', authUser.uid));
     const unsubSessions = onSnapshot(
-      collection(db, 'sessions'),
+      sessionQuery,
       (snapshot) => {
         const list: PracticumSession[] = snapshot.docs.map((docSnap) => {
           const d = docSnap.data();
@@ -137,8 +140,11 @@ export function AttendanceProvider({
       }
     );
 
+    const attendanceQuery = authUser.role === 'asisten'
+      ? query(collection(db, 'attendance'), where('assistantId', '==', authUser.uid))
+      : query(collection(db, 'attendance'), where('studentId', '==', authUser.uid));
     const unsubAttendance = onSnapshot(
-      collection(db, 'attendance'),
+      attendanceQuery,
       (snapshot) => {
         const list: AttendanceRecord[] = snapshot.docs.map((docSnap) => {
           const d = docSnap.data();
@@ -147,6 +153,9 @@ export function AttendanceProvider({
             studentId: String(d.studentId ?? ''),
             studentName: String(d.studentName ?? ''),
             checkedInAt: String(d.checkedInAt ?? ''),
+            assistantId: d.assistantId ? String(d.assistantId) : undefined,
+            nim: d.nim ? String(d.nim) : undefined,
+            className: d.className ? String(d.className) : undefined,
           };
         });
         setAttendanceRecords(list);
@@ -158,75 +167,32 @@ export function AttendanceProvider({
       }
     );
 
-    const unsubClasses = onSnapshot(
-      collection(db, 'classes'),
-      (snapshot) => {
-        const list: PracticumClass[] = snapshot.docs.map((docSnap) => {
-          const d = docSnap.data();
-          return {
-            id: docSnap.id,
-            name: String(d.name ?? ''),
-            assistantIds: Array.isArray(d.assistantIds)
-              ? d.assistantIds.map(String)
-              : undefined,
-          };
-        });
-        setClasses(list);
-      },
-      () => {
-        // Ignore error if collection is empty
-      }
-    );
+    const unsubClasses = authUser.role === 'asisten'
+      ? onSnapshot(collection(db, 'classes'), (snapshot) => {
+          setClasses(snapshot.docs.map((docSnap) => {
+            const d = docSnap.data();
+            return { id: docSnap.id, name: String(d.name ?? ''), assistantIds: Array.isArray(d.assistantIds) ? d.assistantIds.map(String) : undefined };
+          }));
+        }, () => undefined)
+      : () => undefined;
 
-    const unsubParticipants = onSnapshot(
-      collection(db, 'participants'),
-      (snapshot) => {
-        const list: Participant[] = snapshot.docs.map((docSnap) => {
-          const d = docSnap.data();
-          return {
-            classId: String(d.classId ?? ''),
-            studentId: String(d.studentId ?? ''),
-            studentName: String(d.studentName ?? ''),
-            nim: d.nim ? String(d.nim) : undefined,
-          };
-        });
-        setParticipants(list);
-      },
-      () => {
-        // Ignore error
-      }
-    );
+    const unsubParticipants = authUser.role === 'asisten'
+      ? onSnapshot(collection(db, 'participants'), (snapshot) => {
+          setParticipants(snapshot.docs.map((docSnap) => {
+            const d = docSnap.data();
+            return { classId: String(d.classId ?? ''), studentId: String(d.studentId ?? ''), studentName: String(d.studentName ?? ''), nim: d.nim ? String(d.nim) : undefined };
+          }));
+        }, () => undefined)
+      : () => undefined;
 
-    const unsubUsers = onSnapshot(
-      collection(db, 'users'),
-      (snapshot) => {
-        const nextAssistants: AppUser[] = [];
-        const nextStudents: AppUser[] = [];
-        snapshot.docs.forEach((docSnap) => {
-          const d = docSnap.data();
-          const userItem: AppUser = {
-            id: docSnap.id,
-            name: String(d.name ?? ''),
-            role: d.role === 'asisten' ? 'asisten' : 'praktikan',
-            nim: d.nim ? String(d.nim) : undefined,
-            className: d.className ? String(d.className) : undefined,
-            email: d.email ? String(d.email) : undefined,
-          };
-          if (userItem.role === 'asisten') {
-            nextAssistants.push(userItem);
-          } else {
-            nextStudents.push(userItem);
-          }
-        });
-        if (nextAssistants.length > 0 || nextStudents.length > 0) {
-          setAssistants(nextAssistants);
-          setStudents(nextStudents);
-        }
-      },
-      () => {
-        // Keep existing users list if query fails
-      }
-    );
+    const unsubUsers = authUser.role === 'asisten'
+      ? onSnapshot(query(collection(db, 'users'), where('role', '==', 'praktikan')), (snapshot) => {
+          setStudents(snapshot.docs.map((docSnap) => {
+            const d = docSnap.data();
+            return { id: docSnap.id, name: String(d.name ?? ''), role: 'praktikan', nim: d.nim ? String(d.nim) : undefined, className: d.className ? String(d.className) : undefined, email: d.email ? String(d.email) : undefined };
+          }));
+        }, () => undefined)
+      : () => undefined;
 
     return () => {
       unsubSessions();
@@ -331,6 +297,9 @@ export function AttendanceProvider({
         studentId: student.id,
         studentName: student.name,
         checkedInAt: new Date().toISOString(),
+        assistantId: targetSession.assistantId,
+        nim: student.nim,
+        className: student.className,
       };
 
       const optimisticSuccess: RecordAttendanceResult = {

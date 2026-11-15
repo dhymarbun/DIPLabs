@@ -6,6 +6,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  runTransaction,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import {
@@ -29,16 +30,25 @@ function stripUndefined<T extends object>(obj: T): T {
 
 export async function saveUserProfile(user: AuthUser): Promise<void> {
   const ref = doc(db, 'users', user.uid);
-  await setDoc(
-    ref,
-    stripUndefined({
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      nim: user.nim,
-      className: user.className,
-    })
-  );
+  const profile = stripUndefined({
+    uid: user.uid,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    nim: user.nim,
+    className: user.className,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+  await runTransaction(db, async (transaction) => {
+    const nimRef = doc(db, 'nims', user.nim ?? '');
+    const existing = await transaction.get(nimRef);
+    if (existing.exists() && existing.data().uid !== user.uid) {
+      throw new Error('NIM sudah terdaftar. Gunakan NIM lain.');
+    }
+    transaction.set(nimRef, { uid: user.uid });
+    transaction.set(ref, profile);
+  });
 }
 
 export async function fetchUserProfile(uid: string): Promise<AuthUser | null> {
