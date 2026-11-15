@@ -14,7 +14,13 @@ import { useAttendance } from '../../context/AttendanceContext';
 export default function PraktikanScheduleScreen() {
   const router = useRouter();
   const navigation = useNavigation();
-  const { currentUser, sessions, getAttendanceForStudent } = useAttendance();
+  const {
+    currentUser,
+    sessions,
+    sessionsLoading,
+    attendanceError,
+    getAttendanceForStudent,
+  } = useAttendance();
 
   useEffect(() => {
     navigation.setOptions({ title: 'Jadwal Praktikum' });
@@ -109,6 +115,17 @@ export default function PraktikanScheduleScreen() {
             <Text style={styles.historyLink}>Lihat →</Text>
           </Pressable>
 
+          <Pressable
+            onPress={() => router.push('/praktikan/izin')}
+            style={({ pressed }) => [styles.permissionBtn, pressed && styles.pressed]}
+          >
+            <View>
+              <Text style={styles.permissionLabel}>Pengajuan Izin</Text>
+              <Text style={styles.permissionSub}>Ajukan alasan ketidakhadiran dan pantau statusnya</Text>
+            </View>
+            <Text style={styles.historyLink}>Lihat →</Text>
+          </Pressable>
+
           {/* Filter Chips */}
           <ScrollView
             horizontal
@@ -136,7 +153,17 @@ export default function PraktikanScheduleScreen() {
             })}
           </ScrollView>
 
-          {filteredSessions.length === 0 ? (
+          {sessionsLoading ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTitle}>Memuat jadwal...</Text>
+              <Text style={styles.emptySubtitle}>Mengambil sesi praktikum terbaru.</Text>
+            </View>
+          ) : attendanceError ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTitle}>Jadwal tidak dapat dimuat</Text>
+              <Text style={styles.emptySubtitle}>{attendanceError}</Text>
+            </View>
+          ) : filteredSessions.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyTitle}>
                 {selectedFilter === 'all'
@@ -274,6 +301,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#2563EB',
+  },
+  permissionBtn: {
+    backgroundColor: '#F5F3FF',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  permissionLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#5B21B6',
+  },
+  permissionSub: {
+    fontSize: 12,
+    color: '#7C3AED',
+    marginTop: 2,
+    maxWidth: 260,
   },
   pressed: {
     opacity: 0.85,
