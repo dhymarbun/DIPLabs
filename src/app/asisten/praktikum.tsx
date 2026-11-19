@@ -51,9 +51,8 @@ export default function ManagePracticumScreen() {
 
   // Participant form state
   const [selectedClassId, setSelectedClassId] = useState<string>(
-    classes[0]?.id ?? 'K-01'
+    classes[0]?.name ?? 'K-01'
   );
-  const [studentIdInput, setStudentIdInput] = useState<string>('');
   const [studentNameInput, setStudentNameInput] = useState<string>('');
   const [studentNimInput, setStudentNimInput] = useState<string>('');
 
@@ -86,8 +85,17 @@ export default function ManagePracticumScreen() {
     setBusy(true);
     setFeedback(null);
     try {
+      const nextClassName = className.trim();
+      const classDoc = classes.find(
+        (c) => c.id === nextClassName || c.name === nextClassName
+      );
+      const classKeys = new Set<string>([nextClassName]);
+      if (classDoc) {
+        classKeys.add(classDoc.id);
+        classKeys.add(classDoc.name);
+      }
       const classParticipants = participants
-        .filter((p) => p.classId === className.trim())
+        .filter((p) => classKeys.has(p.classId))
         .map((p) => p.studentId);
 
       if (editingSessionId) {
@@ -98,6 +106,7 @@ export default function ManagePracticumScreen() {
           startTime: startTime.trim(),
           endTime: endTime.trim(),
           room: room.trim() || undefined,
+          participantIds: classParticipants,
         });
         setFeedback('Sesi berhasil diperbarui.');
       } else {
@@ -164,22 +173,48 @@ export default function ManagePracticumScreen() {
 
   const handleAddParticipant = async () => {
     const cId = selectedClassId.trim() || classes[0]?.name || 'K-01';
-    const sId = studentIdInput.trim();
     const sName = studentNameInput.trim();
-    if (!sId || !sName) {
-      setFeedback('UID/ID praktikan dan nama praktikan wajib diisi.');
+    const nim = studentNimInput.trim();
+
+    if (!cId) {
+      setFeedback('Kelas wajib diisi.');
       return;
     }
+    if (!/^\d{8,12}$/.test(nim)) {
+      setFeedback('NIM wajib diisi dan harus berupa 8–12 digit angka.');
+      return;
+    }
+
+    const matches = students.filter((s) => (s.nim ?? '').trim() === nim);
+    if (matches.length === 0) {
+      setFeedback(
+        'NIM belum terdaftar sebagai akun praktikan. Pastikan praktikan sudah registrasi.'
+      );
+      return;
+    }
+    if (matches.length > 1) {
+      setFeedback(
+        'NIM terdaftar pada lebih dari satu akun. Hubungi administrator.'
+      );
+      return;
+    }
+
+    const account = matches[0];
+    const resolvedName = sName || account.name;
+    if (!resolvedName) {
+      setFeedback('Nama praktikan wajib diisi.');
+      return;
+    }
+
     setBusy(true);
     setFeedback(null);
     try {
       await addParticipant({
         classId: cId,
-        studentId: sId,
-        studentName: sName,
-        nim: studentNimInput.trim() || undefined,
+        studentId: account.id,
+        studentName: resolvedName,
+        nim,
       });
-      setStudentIdInput('');
       setStudentNameInput('');
       setStudentNimInput('');
       setFeedback('Peserta berhasil ditambahkan ke kelas.');
@@ -193,7 +228,10 @@ export default function ManagePracticumScreen() {
   };
 
   const registeredStudentsHint = useMemo(
-    () => students.slice(0, 8),
+    () =>
+      students
+        .filter((s) => (s.nim ?? '').trim().length > 0)
+        .slice(0, 8),
     [students]
   );
 
@@ -474,7 +512,6 @@ export default function ManagePracticumScreen() {
                         <Pressable
                           key={std.id}
                           onPress={() => {
-                            setStudentIdInput(std.id);
                             setStudentNameInput(std.name);
                             setStudentNimInput(std.nim ?? '');
                             if (std.className) {
@@ -501,16 +538,6 @@ export default function ManagePracticumScreen() {
                   style={styles.input}
                 />
 
-                <Text style={styles.label}>UID / ID Praktikan</Text>
-                <TextInput
-                  value={studentIdInput}
-                  onChangeText={setStudentIdInput}
-                  placeholder="UID akun praktikan"
-                  placeholderTextColor="#94A3B8"
-                  autoCapitalize="none"
-                  style={styles.input}
-                />
-
                 <Text style={styles.label}>Nama Praktikan</Text>
                 <TextInput
                   value={studentNameInput}
@@ -520,14 +547,19 @@ export default function ManagePracticumScreen() {
                   style={styles.input}
                 />
 
-                <Text style={styles.label}>NIM (Opsional)</Text>
+                <Text style={styles.label}>NIM *</Text>
                 <TextInput
                   value={studentNimInput}
                   onChangeText={setStudentNimInput}
-                  placeholder="13523xxx"
+                  placeholder="13523005"
                   placeholderTextColor="#94A3B8"
+                  keyboardType="number-pad"
+                  maxLength={12}
                   style={styles.input}
                 />
+                <Text style={styles.inputHint}>
+                  NIM harus terdaftar sebagai akun praktikan.
+                </Text>
 
                 <Pressable
                   onPress={handleAddParticipant}
@@ -553,7 +585,7 @@ export default function ManagePracticumScreen() {
                               {p.studentName}
                             </Text>
                             <Text style={styles.itemSub}>
-                              Kelas {p.classId} • NIM {p.nim ?? p.studentId}
+                              Kelas {p.classId} • NIM {p.nim ?? '-'}
                             </Text>
                           </View>
                           <Pressable
@@ -667,6 +699,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#0F172A',
     backgroundColor: '#F8FAFC',
+    marginBottom: 12,
+  },
+  inputHint: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: -8,
     marginBottom: 12,
   },
   row: {

@@ -387,6 +387,51 @@ export function AttendanceProvider({
     [authUser]
   );
 
+  const syncSessionParticipants = useCallback(
+    async (classKey: string, studentId: string, action: 'add' | 'remove') => {
+      const classNames = new Set<string>([classKey]);
+      const classDoc = classes.find(
+        (c) => c.id === classKey || c.name === classKey
+      );
+      if (classDoc) {
+        classNames.add(classDoc.id);
+        classNames.add(classDoc.name);
+      }
+      const belongsToClass = (session: PracticumSession) =>
+        classNames.has(session.className) ||
+        (!!session.classId && classNames.has(session.classId));
+      const applyAction = (ids: string[] | undefined) => {
+        const current = ids ?? [];
+        if (action === 'add') {
+          return current.includes(studentId)
+            ? current
+            : [...current, studentId];
+        }
+        return current.filter((id) => id !== studentId);
+      };
+
+      setAllSessions((prev) =>
+        prev.map((session) =>
+          belongsToClass(session)
+            ? { ...session, participantIds: applyAction(session.participantIds) }
+            : session
+        )
+      );
+
+      if (isFirebaseConfigured && authUser) {
+        const affectedSessions = allSessions.filter(belongsToClass);
+        await Promise.all(
+          affectedSessions.map((session) =>
+            updateSessionDoc(session.id, {
+              participantIds: applyAction(session.participantIds),
+            })
+          )
+        );
+      }
+    },
+    [allSessions, authUser, classes]
+  );
+
   const addParticipant = useCallback(
     async (participant: Participant) => {
       setParticipants((prev) => {
@@ -402,20 +447,35 @@ export function AttendanceProvider({
       if (isFirebaseConfigured && authUser) {
         await upsertParticipantDoc(participant);
       }
+      await syncSessionParticipants(
+        participant.classId,
+        participant.studentId,
+        'add'
+      );
     },
-    [authUser]
+    [authUser, syncSessionParticipants]
   );
 
   const removeParticipant = useCallback(
     async (participantId: string) => {
+      const target = participants.find(
+        (p) => `${p.classId}_${p.studentId}` === participantId
+      );
       setParticipants((prev) =>
         prev.filter((p) => `${p.classId}_${p.studentId}` !== participantId)
       );
       if (isFirebaseConfigured && authUser) {
         await removeParticipantDoc(participantId);
       }
+      if (target) {
+        await syncSessionParticipants(
+          target.classId,
+          target.studentId,
+          'remove'
+        );
+      }
     },
-    [authUser]
+    [authUser, participants, syncSessionParticipants]
   );
 
   const addClass = useCallback(
