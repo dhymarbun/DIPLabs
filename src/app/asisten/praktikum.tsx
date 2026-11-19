@@ -35,6 +35,24 @@ function isValidISODate(value: string): boolean {
   );
 }
 
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+function timeToMinutes(value: string): number {
+  const [hours, minutes] = value.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+function minutesToTime(total: number): string {
+  const normalized = ((total % 1440) + 1440) % 1440;
+  const hours = Math.floor(normalized / 60);
+  const minutes = normalized % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+function shiftTime(value: string, offsetMinutes: number): string {
+  return minutesToTime(timeToMinutes(value) + offsetMinutes);
+}
+
 export default function ManagePracticumScreen() {
   const router = useRouter();
   const { authUser } = useAuth();
@@ -85,6 +103,22 @@ export default function ManagePracticumScreen() {
     setRoom('Lab Dasar 2');
   };
 
+  const handleStartTimeChange = (value: string) => {
+    setStartTime(value);
+    const trimmed = value.trim();
+    if (TIME_PATTERN.test(trimmed)) {
+      setEndTime(shiftTime(trimmed, 120));
+    }
+  };
+
+  const handleEndTimeChange = (value: string) => {
+    setEndTime(value);
+    const trimmed = value.trim();
+    if (TIME_PATTERN.test(trimmed)) {
+      setStartTime(shiftTime(trimmed, -120));
+    }
+  };
+
   const handleEditSession = (s: PracticumSession) => {
     setEditingSessionId(s.id);
     setPracticalName(s.practicalName);
@@ -126,9 +160,15 @@ export default function ManagePracticumScreen() {
       return;
     }
 
-    const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
-    if (!timePattern.test(nextStartTime) || !timePattern.test(nextEndTime)) {
+    if (!TIME_PATTERN.test(nextStartTime) || !TIME_PATTERN.test(nextEndTime)) {
       setFeedback('Format jam harus HH:mm, contoh 08:00 dan 10:00.');
+      return;
+    }
+
+    const durationMinutes =
+      (timeToMinutes(nextEndTime) - timeToMinutes(nextStartTime) + 1440) % 1440;
+    if (durationMinutes !== 120) {
+      setFeedback('Durasi sesi harus tepat 2 jam, contoh 08:00–10:00.');
       return;
     }
 
@@ -419,9 +459,10 @@ export default function ManagePracticumScreen() {
                     </Text>
                     <TextInput
                       value={startTime}
-                      onChangeText={setStartTime}
+                      onChangeText={handleStartTimeChange}
                       placeholder="08:00"
                       placeholderTextColor="#94A3B8"
+                      maxLength={5}
                       style={styles.input}
                     />
                   </View>
@@ -431,9 +472,10 @@ export default function ManagePracticumScreen() {
                     </Text>
                     <TextInput
                       value={endTime}
-                      onChangeText={setEndTime}
+                      onChangeText={handleEndTimeChange}
                       placeholder="10:00"
                       placeholderTextColor="#94A3B8"
+                      maxLength={5}
                       style={styles.input}
                     />
                   </View>
