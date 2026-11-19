@@ -264,6 +264,9 @@ export default function PraktikanSessionDetailScreen() {
               Tulis alasan ketidakhadiran. Sistem memberi klasifikasi AI sebagai informasi pendukung;
               keputusan akhir tetap oleh asisten.
             </Text>
+            <Text style={styles.permissionLabel}>
+              Alasan Izin<Text style={styles.requiredMark}> *</Text>
+            </Text>
             <TextInput
               value={permissionReason}
               onChangeText={setPermissionReason}
@@ -423,6 +426,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     marginBottom: 10,
+  },
+  permissionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#334155',
+    marginBottom: 4,
+  },
+  requiredMark: {
+    color: '#DC2626',
   },
   permissionInput: {
     minHeight: 84,

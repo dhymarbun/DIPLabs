@@ -99,7 +99,9 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Nama Lengkap</Text>
+              <Text style={styles.label}>
+                Nama Lengkap<Text style={styles.requiredMark}> *</Text>
+              </Text>
               <TextInput
                 value={name}
                 onChangeText={setName}
@@ -111,7 +113,9 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>
+                Email<Text style={styles.requiredMark}> *</Text>
+              </Text>
               <TextInput
                 value={email}
                 onChangeText={setEmail}
@@ -125,7 +129,9 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>
+                Password<Text style={styles.requiredMark}> *</Text>
+              </Text>
               <TextInput
                 value={password}
                 onChangeText={setPassword}
@@ -139,7 +145,9 @@ export default function RegisterScreen() {
 
             <View style={styles.rowFields}>
               <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.label}>NIM</Text>
+                <Text style={styles.label}>
+                  NIM<Text style={styles.requiredMark}> *</Text>
+                </Text>
                 <TextInput
                   value={nim}
                   onChangeText={setNim}
@@ -151,7 +159,9 @@ export default function RegisterScreen() {
               </View>
 
               <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Kelas</Text>
+                <Text style={styles.label}>
+                  Kelas<Text style={styles.requiredMark}> *</Text>
+                </Text>
                 <TextInput
                   value={className}
                   onChangeText={setClassName}
@@ -272,6 +282,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#334155',
     marginBottom: 6,
+  },
+  requiredMark: {
+    color: '#DC2626',
   },
   input: {
     borderWidth: 1,

@@ -77,15 +77,36 @@ export default function ManagePracticumScreen() {
   };
 
   const handleSaveSession = async () => {
-    if (!practicalName.trim() || !className.trim() || !date.trim()) {
-      setFeedback('Nama praktikum, kelas, dan tanggal wajib diisi.');
+    const nextPracticalName = practicalName.trim();
+    const nextClassName = className.trim();
+    const nextDate = date.trim();
+    const nextStartTime = startTime.trim();
+    const nextEndTime = endTime.trim();
+    const nextRoom = room.trim();
+
+    if (
+      !nextPracticalName ||
+      !nextClassName ||
+      !nextDate ||
+      !nextStartTime ||
+      !nextEndTime ||
+      !nextRoom
+    ) {
+      setFeedback(
+        'Nama praktikum, kelas, tanggal, jam mulai, jam selesai, dan ruangan wajib diisi.'
+      );
+      return;
+    }
+
+    const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+    if (!timePattern.test(nextStartTime) || !timePattern.test(nextEndTime)) {
+      setFeedback('Format jam harus HH:mm, contoh 08:00 dan 10:00.');
       return;
     }
 
     setBusy(true);
     setFeedback(null);
     try {
-      const nextClassName = className.trim();
       const classDoc = classes.find(
         (c) => c.id === nextClassName || c.name === nextClassName
       );
@@ -100,23 +121,23 @@ export default function ManagePracticumScreen() {
 
       if (editingSessionId) {
         await updateSession(editingSessionId, {
-          practicalName: practicalName.trim(),
-          className: className.trim(),
-          date: date.trim(),
-          startTime: startTime.trim(),
-          endTime: endTime.trim(),
-          room: room.trim() || undefined,
+          practicalName: nextPracticalName,
+          className: nextClassName,
+          date: nextDate,
+          startTime: nextStartTime,
+          endTime: nextEndTime,
+          room: nextRoom,
           participantIds: classParticipants,
         });
         setFeedback('Sesi berhasil diperbarui.');
       } else {
         await addSession({
-          practicalName: practicalName.trim(),
-          className: className.trim(),
-          date: date.trim(),
-          startTime: startTime.trim(),
-          endTime: endTime.trim(),
-          room: room.trim() || undefined,
+          practicalName: nextPracticalName,
+          className: nextClassName,
+          date: nextDate,
+          startTime: nextStartTime,
+          endTime: nextEndTime,
+          room: nextRoom,
           assistantId: authUser?.uid,
           assistantName: authUser?.name,
           participantIds: classParticipants,
@@ -172,7 +193,7 @@ export default function ManagePracticumScreen() {
   };
 
   const handleAddParticipant = async () => {
-    const cId = selectedClassId.trim() || classes[0]?.name || 'K-01';
+    const cId = selectedClassId.trim();
     const sName = studentNameInput.trim();
     const nim = studentNimInput.trim();
 
@@ -324,7 +345,9 @@ export default function ManagePracticumScreen() {
                   {editingSessionId ? 'Ubah Sesi Praktikum' : 'Tambah Sesi Baru'}
                 </Text>
 
-                <Text style={styles.label}>Nama Modul / Praktikum</Text>
+                <Text style={styles.label}>
+                  Nama Modul / Praktikum<Text style={styles.requiredMark}> *</Text>
+                </Text>
                 <TextInput
                   value={practicalName}
                   onChangeText={setPracticalName}
@@ -335,7 +358,9 @@ export default function ManagePracticumScreen() {
 
                 <View style={styles.row}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.label}>Kelas</Text>
+                    <Text style={styles.label}>
+                      Kelas<Text style={styles.requiredMark}> *</Text>
+                    </Text>
                     <TextInput
                       value={className}
                       onChangeText={setClassName}
@@ -345,7 +370,9 @@ export default function ManagePracticumScreen() {
                     />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.label}>Tanggal (YYYY-MM-DD)</Text>
+                    <Text style={styles.label}>
+                      Tanggal (YYYY-MM-DD)<Text style={styles.requiredMark}> *</Text>
+                    </Text>
                     <TextInput
                       value={date}
                       onChangeText={setDate}
@@ -358,7 +385,9 @@ export default function ManagePracticumScreen() {
 
                 <View style={styles.row}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.label}>Jam Mulai</Text>
+                    <Text style={styles.label}>
+                      Jam Mulai<Text style={styles.requiredMark}> *</Text>
+                    </Text>
                     <TextInput
                       value={startTime}
                       onChangeText={setStartTime}
@@ -368,7 +397,9 @@ export default function ManagePracticumScreen() {
                     />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.label}>Jam Selesai</Text>
+                    <Text style={styles.label}>
+                      Jam Selesai<Text style={styles.requiredMark}> *</Text>
+                    </Text>
                     <TextInput
                       value={endTime}
                       onChangeText={setEndTime}
@@ -379,7 +410,9 @@ export default function ManagePracticumScreen() {
                   </View>
                 </View>
 
-                <Text style={styles.label}>Ruangan</Text>
+                <Text style={styles.label}>
+                  Ruangan<Text style={styles.requiredMark}> *</Text>
+                </Text>
                 <TextInput
                   value={room}
                   onChangeText={setRoom}
@@ -453,7 +486,9 @@ export default function ManagePracticumScreen() {
             <>
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>Tambah Kelas Praktikum</Text>
-                <Text style={styles.label}>Nama Kelas</Text>
+                <Text style={styles.label}>
+                  Nama Kelas<Text style={styles.requiredMark}> *</Text>
+                </Text>
                 <TextInput
                   value={newClassName}
                   onChangeText={setNewClassName}
@@ -529,7 +564,9 @@ export default function ManagePracticumScreen() {
                   </View>
                 ) : null}
 
-                <Text style={styles.label}>Kelas</Text>
+                <Text style={styles.label}>
+                  Kelas<Text style={styles.requiredMark}> *</Text>
+                </Text>
                 <TextInput
                   value={selectedClassId}
                   onChangeText={setSelectedClassId}
@@ -547,7 +584,9 @@ export default function ManagePracticumScreen() {
                   style={styles.input}
                 />
 
-                <Text style={styles.label}>NIM *</Text>
+                <Text style={styles.label}>
+                  NIM<Text style={styles.requiredMark}> *</Text>
+                </Text>
                 <TextInput
                   value={studentNimInput}
                   onChangeText={setStudentNimInput}
@@ -689,6 +728,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#334155',
     marginBottom: 4,
+  },
+  requiredMark: {
+    color: '#DC2626',
   },
   input: {
     borderWidth: 1,
