@@ -263,3 +263,81 @@ tersinkronisasi secara real-time.
 - **Penanganan Error**: Menangani input tidak valid, kegagalan login/registrasi, gangguan jaringan Firestore, serta kondisi saat API AI tidak merespons (fallback).
 - **Firebase Security Rules**: Membatasi hak baca dan tulis dokumen di Firestore berdasarkan autentikasi dan peran (role) pengguna.
 - **Independensi Keputusan**: Prediksi model AI hanya menjadi acuan/informasi pendukung, keputusan akhir persetujuan izin sepenuhnya berada di tangan asisten.
+
+# PERTEMUAN 3
+
+Sprint 3 — Validasi Lokasi, Peta Laboratorium Interaktif, dan Push Notification
+
+Pada sprint sebelumnya, aplikasi telah memiliki sistem autentikasi dan penyimpanan data menggunakan Firebase sehingga praktikan dan asisten dapat mengakses informasi yang sama secara real-time. Pengelolaan sesi, pencatatan presensi, serta pengajuan dan pemeriksaan izin juga telah terintegrasi dengan database.
+
+Namun, presensi yang dilakukan praktikan belum mempertimbangkan lokasi fisik pengguna. Praktikan masih dapat melakukan presensi dari mana saja selama sesi dibuka. Selain itu, pengguna harus membuka aplikasi untuk mengetahui perubahan jadwal, pembukaan sesi, atau keputusan pengajuan izin.
+
+Pada sprint ini, aplikasi dikembangkan dengan memanfaatkan layanan lokasi perangkat (Geolocation), peta interaktif (Google Maps), dan pemberitahuan perangkat (Push Notification). Aplikasi memeriksa keberadaan fisik praktikan dalam radius laboratorium ketika melakukan presensi, menampilkan persebaran lokasi laboratorium Informatika beserta aktivitas praktikumnya di atas peta, serta mengirimkan push notification ketika terdapat informasi penting.
+
+## User Story
+
+| ID | Aktor | User Story |
+| :--- | :--- | :--- |
+| **US-20** | Praktikan | Membuka halaman khusus presensi yang terpisah dari halaman detail sesi untuk melihat informasi sesi, status sesi, hasil pemeriksaan lokasi, dan melakukan presensi (opsional: menggunakan QR Code). |
+| **US-21** | Praktikan | Melakukan presensi dengan validasi lokasi perangkat yang memastikan praktikan berada dalam radius laboratorium yang ditentukan saat sesi dibuka, serta mencegah presensi di luar radius atau presensi ganda. |
+| **US-22** | Asisten | Mengelola data lokasi laboratorium (nama, ruangan, titik koordinat latitude/longitude, dan radius presensi) di Cloud Firestore serta menghubungkannya dengan sesi praktikum. |
+| **US-23** | Pengguna | Membuka halaman Peta Laboratorium Interaktif (Maps) yang menampilkan marker lokasi laboratorium Informatika serta marker lokasi perangkat pengguna yang diperbarui secara real-time. |
+| **US-24** | Pengguna | Memilih marker laboratorium pada peta untuk melihat detail laboratorium beserta informasi praktikum yang sedang berlangsung dan praktikum berikutnya secara real-time dari Firestore. |
+| **US-25** | Sistem / Asisten | Mengirimkan push notification kepada pengguna terkait ketika sesi praktikum dibuka, jadwal praktikum mengalami perubahan, atau pengajuan izin diterima/ditolak oleh asisten. |
+| **US-26** | Praktikan | Menerima push notification pada perangkat terkait pembukaan sesi, perubahan jadwal, atau keputusan pengajuan izin, serta dapat menavigasi ke halaman terkait saat notifikasi ditekan. |
+| **US-27** | Pengguna | Memperoleh permintaan izin akses lokasi dan notifikasi perangkat serta informasi status yang jelas ketika izin ditolak, layanan lokasi tidak aktif, lokasi belum tersedia, koneksi terganggu, atau notifikasi tidak dapat diterima. |
+
+## Requirement
+
+- Node.js dan npm
+- Expo CLI / React Native Development Build (mendukung modul native Maps, Geolocation, dan Push Notification)
+- React Native & TypeScript
+- Expo Router
+- Firebase Project (Authentication, Cloud Firestore, dan Firebase Cloud Messaging / FCM)
+- Layanan Peta & Lokasi: `react-native-maps`, `@react-native-community/geolocation`, `react-native-permissions` (atau modul geolocation setara)
+- Layanan Push Notification: `@react-native-firebase/messaging` + `react-native-notify-kit` (atau mekanisme push notification React Native yang sesuai)
+- Perangkat fisik atau emulator dengan Google Play Services, GPS/Location Service aktif, dan koneksi internet
+
+## Data dan Penyimpanan
+
+Sprint ini melanjutkan penggunaan data dinamis secara penuh di Cloud Firestore tanpa menggunakan dummy data:
+
+* **Cloud Firestore (`laboratories`)**: Menyimpan daftar laboratorium Informatika beserta titik koordinat (`latitude`, `longitude`) dan radius validasi presensi (`radiusMeters`).
+* **Cloud Firestore (`sessions` & `attendance`)**: Menyimpan referensi laboratorium/koordinat pada sesi praktikum serta mencatat titik koordinat dan jarak perangkat praktikan pada dokumen kehadiran saat presensi berhasil.
+* **Cloud Firestore (`users` / `notifications`)**: Menyimpan token perangkat (FCM token) dan peristiwa notifikasi untuk pengiriman pemberitahuan terarah kepada pengguna yang berkepentingan.
+* **Real-time Geolocation**: Memanfaatkan sensor GPS perangkat secara langsung untuk memantau posisi pengguna pada peta dan memvalidasi jarak ke laboratorium saat presensi.
+
+## Role & Alur Singkat
+
+| Role | Yang bisa dilakukan |
+| --- | --- |
+| **Praktikan** | Membuka halaman khusus presensi, memverifikasi posisi di dalam radius laboratorium untuk melakukan presensi, melihat peta interaktif laboratorium beserta kegiatan praktikum aktif/berikutnya, serta menerima push notification saat sesi dibuka, jadwal berubah, atau izin diputuskan. |
+| **Asisten** | Mengelola lokasi dan radius laboratorium di Firestore, menentukan laboratorium untuk sesi praktikum, membuka/menutup sesi dan mengubah jadwal (yang memicu push notification ke praktikan), memeriksa serta memutuskan izin (yang memicu push notification ke pengaju), dan melihat peta laboratorium. |
+
+### Alur Demo Wajib
+
+**Alur 1: Presensi Berbasis Lokasi**
+1. Asisten memastikan sesi praktikum telah terhubung dengan lokasi dan radius laboratorium di Firestore, lalu membuka sesi.
+2. Praktikan membuka halaman detail sesi lalu menuju ke **halaman khusus presensi**.
+3. Aplikasi meminta/memeriksa izin lokasi perangkat, mengambil koordinat GPS perangkat, dan menghitung jarak terhadap titik koordinat serta radius laboratorium.
+4. Apabila praktikan berada di luar radius (atau lokasi tidak tersedia), aplikasi menampilkan status di luar radius dan menolak pencatatan presensi.
+5. Apabila sesi sedang dibuka dan praktikan berada di dalam radius yang diizinkan, presensi berhasil dicatat ke Firestore beserta timestamp dan informasi lokasinya.
+6. Asisten melihat rekap kehadiran praktikan secara real-time.
+
+**Alur 2: Peta dan Informasi Laboratorium**
+1. Pengguna membuka halaman **Maps (Peta Laboratorium)**.
+2. Aplikasi menampilkan peta interaktif dengan marker posisi pengguna yang bergerak mengikuti perubahan lokasi perangkat serta marker seluruh laboratorium Informatika dari Firestore.
+3. Pengguna memilih salah satu marker laboratorium pada peta.
+4. Aplikasi menampilkan informasi laboratorium tersebut beserta kegiatan praktikum yang **sedang berlangsung** dan **praktikum berikutnya** (nama praktikum, kelas, waktu pelaksanaan, dan status sesi) secara real-time berdasarkan data Firestore.
+
+**Alur 3: Notifikasi Kegiatan**
+1. Perangkat pengguna telah memberikan izin notifikasi dan terdaftar untuk menerima pemberitahuan.
+2. Asisten membuka sesi praktikum, mengubah jadwal sesi, atau memberikan keputusan (menerima/menolak) pada pengajuan izin praktikan.
+3. Sistem memicu dan mengirimkan push notification kepada pengguna yang berkepentingan.
+4. Perangkat praktikan menerima push notification yang menampilkan informasi perubahan tersebut, dan menekan notifikasi akan mengarahkan pengguna ke halaman aplikasi yang relevan.
+
+## Validasi, Izin Perangkat, dan Keamanan
+
+- **Validasi Lokasi Wajib dalam Proses Presensi**: Pemeriksaan radius lokasi bukan sekadar indikator visual di UI, melainkan bagian dari fungsi pencatatan presensi (`recordAttendance`). Presensi yang tidak memenuhi syarat status sesi (`open`), keunikan kehadiran, atau radius lokasi tidak akan dicatat ke Firestore.
+- **Penanganan Kondisi Perangkat**: Menangani dan menampilkan pesan informatif saat izin lokasi/notifikasi ditolak pengguna, GPS/layanan lokasi perangkat mati, sinyal lokasi belum tersedia, koneksi internet terputus, atau token notifikasi gagal diperoleh.
+- **Firebase Security Rules**: Hanya asisten yang berhak menambah, mengubah, atau menghapus data lokasi laboratorium (`laboratories/{labId}`), sedangkan praktikan hanya memiliki akses baca dan hanya dapat mencatat presensi miliknya sendiri ketika sesi terbuka.
