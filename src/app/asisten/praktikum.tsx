@@ -16,6 +16,25 @@ import { PracticumSession } from '../../types/attendance';
 
 type TabKey = 'sessions' | 'classes' | 'participants';
 
+function getTodayDateString(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function isValidISODate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const parsed = new Date(year, month - 1, day);
+  return (
+    parsed.getFullYear() === year &&
+    parsed.getMonth() === month - 1 &&
+    parsed.getDate() === day
+  );
+}
+
 export default function ManagePracticumScreen() {
   const router = useRouter();
   const { authUser } = useAuth();
@@ -41,7 +60,7 @@ export default function ManagePracticumScreen() {
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [practicalName, setPracticalName] = useState<string>('');
   const [className, setClassName] = useState<string>('K-01');
-  const [date, setDate] = useState<string>('2026-11-12');
+  const [date, setDate] = useState<string>(() => getTodayDateString());
   const [startTime, setStartTime] = useState<string>('08:00');
   const [endTime, setEndTime] = useState<string>('10:00');
   const [room, setRoom] = useState<string>('Lab Dasar 2');
@@ -60,7 +79,7 @@ export default function ManagePracticumScreen() {
     setEditingSessionId(null);
     setPracticalName('');
     setClassName('K-01');
-    setDate('2026-11-12');
+    setDate(getTodayDateString());
     setStartTime('08:00');
     setEndTime('10:00');
     setRoom('Lab Dasar 2');
@@ -95,6 +114,15 @@ export default function ManagePracticumScreen() {
       setFeedback(
         'Nama praktikum, kelas, tanggal, jam mulai, jam selesai, dan ruangan wajib diisi.'
       );
+      return;
+    }
+
+    if (!isValidISODate(nextDate)) {
+      setFeedback('Format tanggal harus YYYY-MM-DD dan tanggal harus valid.');
+      return;
+    }
+    if (nextDate < getTodayDateString()) {
+      setFeedback('Tanggal sesi tidak boleh sebelum hari ini.');
       return;
     }
 
@@ -376,8 +404,9 @@ export default function ManagePracticumScreen() {
                     <TextInput
                       value={date}
                       onChangeText={setDate}
-                      placeholder="2026-11-12"
+                      placeholder="YYYY-MM-DD"
                       placeholderTextColor="#94A3B8"
+                      maxLength={10}
                       style={styles.input}
                     />
                   </View>
