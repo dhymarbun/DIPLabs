@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -11,24 +12,36 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
+import { useAttendance } from '../../context/AttendanceContext';
 import { UserRole } from '../../types/attendance';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { register, authUser, authLoading } = useAuth();
-
-  React.useEffect(() => {
-    if (!authLoading && authUser) router.replace(authUser.role === 'asisten' ? '/asisten' : '/praktikan');
-  }, [authLoading, authUser, router]);
+  const { classes } = useAttendance();
 
   const [role, setRole] = useState<UserRole>('praktikan');
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [nim, setNim] = useState<string>('');
-  const [className, setClassName] = useState<string>('K-01');
+  const [className, setClassName] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [classPickerOpen, setClassPickerOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!authLoading && authUser) router.replace(authUser.role === 'asisten' ? '/asisten' : '/praktikan');
+  }, [authLoading, authUser, router]);
+
+  useEffect(() => {
+    if (!className) return;
+    const stillExists = classes.some((c) => c.name === className);
+    if (!stillExists) {
+      setClassName('');
+      setErrorMessage('Kelas yang dipilih sudah tidak tersedia. Pilih kelas lain.');
+    }
+  }, [classes, className]);
 
   const handleRegister = async () => {
     if (!name.trim()) {
@@ -43,6 +56,10 @@ export default function RegisterScreen() {
       setErrorMessage('Password minimal 6 karakter.');
       return;
     }
+    if (!className) {
+      setErrorMessage('Kelas harus dipilih dari daftar yang tersedia.');
+      return;
+    }
 
     setErrorMessage(null);
     setSubmitting(true);
@@ -53,7 +70,7 @@ export default function RegisterScreen() {
         password,
         role,
         nim: nim.trim(),
-        className: className.trim(),
+        className,
       });
       router.replace(role === 'asisten' ? '/asisten' : '/praktikan');
     } catch (err) {
@@ -162,14 +179,28 @@ export default function RegisterScreen() {
                 <Text style={styles.label}>
                   Kelas<Text style={styles.requiredMark}> *</Text>
                 </Text>
-                <TextInput
-                  value={className}
-                  onChangeText={setClassName}
-                  placeholder="K-01"
-                  placeholderTextColor="#94A3B8"
-                  editable={!submitting}
-                  style={styles.input}
-                />
+                <Pressable
+                  onPress={() => setClassPickerOpen(true)}
+                  disabled={submitting}
+                  style={styles.classSelect}
+                >
+                  <Text
+                    style={[
+                      styles.classSelectText,
+                      !className && styles.classSelectPlaceholder,
+                    ]}
+                  >
+                    {className || 'Pilih kelas'}
+                  </Text>
+                  <Text style={styles.classSelectAction}>
+                    {className ? 'Ganti' : 'Pilih'}
+                  </Text>
+                </Pressable>
+                {classes.length === 0 ? (
+                  <Text style={styles.classWarning}>
+                    Belum ada kelas. Hubungi asisten untuk membuat kelas.
+                  </Text>
+                ) : null}
               </View>
             </View>
 
@@ -206,7 +237,61 @@ export default function RegisterScreen() {
             </View>
           </View>
         </View>
-      </ScrollView>
+      <Modal
+        visible={classPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setClassPickerOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Pilih Kelas</Text>
+            {classes.length === 0 ? (
+              <Text style={styles.emptyText}>
+                Belum ada kelas. Hubungi asisten.
+              </Text>
+            ) : (
+              <ScrollView
+                style={styles.modalList}
+                contentContainerStyle={styles.modalListContent}
+              >
+                {classes.map((c) => (
+                  <Pressable
+                    key={c.id}
+                    onPress={() => {
+                      setClassName(c.name);
+                      setClassPickerOpen(false);
+                    }}
+                    style={[
+                      styles.modalOption,
+                      className === c.name && styles.modalOptionActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        className === c.name && styles.modalOptionTextActive,
+                      ]}
+                    >
+                      {c.name}
+                    </Text>
+                    {className === c.name && (
+                      <Text style={styles.modalOptionMark}>Dipilih</Text>
+                    )}
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
+            <Pressable
+              onPress={() => setClassPickerOpen(false)}
+              style={styles.secondaryBtn}
+            >
+              <Text style={styles.secondaryBtnText}>Tutup</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    </ScrollView>
     </SafeAreaView>
   );
 }
@@ -295,6 +380,108 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#0F172A',
     backgroundColor: '#F8FAFC',
+  },
+  classSelect: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#F8FAFC',
+    gap: 8,
+  },
+  classSelectText: {
+    fontSize: 14,
+    color: '#0F172A',
+    flex: 1,
+  },
+  classSelectPlaceholder: {
+    color: '#94A3B8',
+  },
+  classSelectAction: {
+    fontSize: 12,
+    color: '#2563EB',
+    fontWeight: '600',
+  },
+  classWarning: {
+    fontSize: 11,
+    color: '#B45309',
+    marginTop: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 420,
+    maxHeight: '80%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    gap: 10,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  modalList: {
+    maxHeight: 340,
+  },
+  modalListContent: {
+    gap: 8,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#F8FAFC',
+    gap: 8,
+  },
+  modalOptionActive: {
+    borderColor: '#2563EB',
+    backgroundColor: '#EFF6FF',
+  },
+  modalOptionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  modalOptionTextActive: {
+    color: '#1D4ED8',
+  },
+  modalOptionMark: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1D4ED8',
+  },
+  secondaryBtn: {
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 11,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  secondaryBtnText: {
+    color: '#334155',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  emptyText: {
+    fontSize: 13,
+    color: '#64748B',
   },
   errorBox: {
     backgroundColor: '#FEF2F2',

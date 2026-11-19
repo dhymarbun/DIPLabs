@@ -17,6 +17,11 @@ import { PracticumClass, PracticumSession } from '../../types/attendance';
 import { normalizeClassName } from '../../utils/classNames';
 
 type TabKey = 'sessions' | 'classes' | 'participants';
+type FeedbackTone = 'error' | 'success' | 'info';
+type FeedbackEntry = {
+  message: string;
+  tone: FeedbackTone;
+};
 
 function getTodayDateString(): string {
   const now = new Date();
@@ -77,7 +82,38 @@ export default function ManagePracticumScreen() {
 
   const [activeTab, setActiveTab] = useState<TabKey>('sessions');
   const [busy, setBusy] = useState<boolean>(false);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedbackByTab, setFeedbackByTab] = useState<
+    Record<TabKey, FeedbackEntry | null>
+  >({
+    sessions: null,
+    classes: null,
+    participants: null,
+  });
+
+  const showFeedback = (
+    tab: TabKey,
+    message: string,
+    tone: FeedbackTone = 'error'
+  ) => {
+    setFeedbackByTab((prev) => ({ ...prev, [tab]: { message, tone } }));
+  };
+
+  const clearFeedback = (tab: TabKey) => {
+    setFeedbackByTab((prev) => ({ ...prev, [tab]: null }));
+  };
+
+  const clearAllFeedback = () => {
+    setFeedbackByTab({
+      sessions: null,
+      classes: null,
+      participants: null,
+    });
+  };
+
+  const handleTabChange = (tab: TabKey) => {
+    clearAllFeedback();
+    setActiveTab(tab);
+  };
 
   // Session form state
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -178,30 +214,40 @@ export default function ManagePracticumScreen() {
       !nextEndTime ||
       !nextRoom
     ) {
-      setFeedback(
+      showFeedback(
+        'sessions',
         'Nama praktikum, kelas, tanggal, jam mulai, jam selesai, dan ruangan wajib diisi.'
       );
       return;
     }
 
     if (!isValidISODate(nextDate)) {
-      setFeedback('Format tanggal harus YYYY-MM-DD dan tanggal harus valid.');
+      showFeedback(
+        'sessions',
+        'Format tanggal harus YYYY-MM-DD dan tanggal harus valid.'
+      );
       return;
     }
     if (nextDate < getTodayDateString()) {
-      setFeedback('Tanggal sesi tidak boleh sebelum hari ini.');
+      showFeedback('sessions', 'Tanggal sesi tidak boleh sebelum hari ini.');
       return;
     }
 
     if (!TIME_PATTERN.test(nextStartTime) || !TIME_PATTERN.test(nextEndTime)) {
-      setFeedback('Format jam harus HH:mm, contoh 08:00 dan 10:00.');
+      showFeedback(
+        'sessions',
+        'Format jam harus HH:mm, contoh 08:00 dan 10:00.'
+      );
       return;
     }
 
     const durationMinutes =
       (timeToMinutes(nextEndTime) - timeToMinutes(nextStartTime) + 1440) % 1440;
     if (durationMinutes !== 120) {
-      setFeedback('Durasi sesi harus tepat 2 jam, contoh 08:00–10:00.');
+      showFeedback(
+        'sessions',
+        'Durasi sesi harus tepat 2 jam, contoh 08:00–10:00.'
+      );
       return;
     }
 
@@ -209,13 +255,16 @@ export default function ManagePracticumScreen() {
       (c) => c.id === nextClassName || c.name === nextClassName
     );
     if (!classDoc) {
-      setFeedback('Kelas harus dipilih dari daftar kelas yang tersedia.');
+      showFeedback(
+        'sessions',
+        'Kelas harus dipilih dari daftar kelas yang tersedia.'
+      );
       return;
     }
     const canonicalClassName = classDoc.name;
 
     setBusy(true);
-    setFeedback(null);
+    clearFeedback('sessions');
     try {
       const classParticipants = participants
         .filter(
@@ -233,7 +282,7 @@ export default function ManagePracticumScreen() {
           room: nextRoom,
           participantIds: classParticipants,
         });
-        setFeedback('Sesi berhasil diperbarui.');
+        showFeedback('sessions', 'Sesi berhasil diperbarui.', 'success');
       } else {
         await addSession({
           practicalName: nextPracticalName,
@@ -246,11 +295,12 @@ export default function ManagePracticumScreen() {
           assistantName: authUser?.name,
           participantIds: classParticipants,
         });
-        setFeedback('Sesi baru berhasil ditambahkan.');
+        showFeedback('sessions', 'Sesi baru berhasil ditambahkan.', 'success');
       }
       resetSessionForm();
     } catch (err) {
-      setFeedback(
+      showFeedback(
+        'sessions',
         err instanceof Error ? err.message : 'Gagal menyimpan data sesi.'
       );
     } finally {
@@ -260,12 +310,13 @@ export default function ManagePracticumScreen() {
 
   const handleDeleteSession = async (sessionId: string) => {
     setBusy(true);
-    setFeedback(null);
+    clearFeedback('sessions');
     try {
       await deleteSession(sessionId);
-      setFeedback('Sesi berhasil dihapus.');
+      showFeedback('sessions', 'Sesi berhasil dihapus.', 'success');
     } catch (err) {
-      setFeedback(
+      showFeedback(
+        'sessions',
         err instanceof Error ? err.message : 'Gagal menghapus sesi.'
       );
     } finally {
@@ -276,7 +327,7 @@ export default function ManagePracticumScreen() {
   const handleAddClass = async () => {
     const normalizedClassName = newClassName.trim();
     if (!normalizedClassName) {
-      setFeedback('Nama kelas wajib diisi.');
+      showFeedback('classes', 'Nama kelas wajib diisi.');
       return;
     }
     const classNameKey = normalizeClassName(normalizedClassName);
@@ -284,20 +335,21 @@ export default function ManagePracticumScreen() {
       (c) => normalizeClassName(c.name) === classNameKey
     );
     if (isDuplicate) {
-      setFeedback('Nama kelas sudah ada.');
+      showFeedback('classes', 'Nama kelas sudah ada.');
       return;
     }
     setBusy(true);
-    setFeedback(null);
+    clearFeedback('classes');
     try {
       await addClass({
         name: normalizedClassName,
         assistantIds: authUser ? [authUser.uid] : [],
       });
       setNewClassName('');
-      setFeedback('Kelas baru berhasil ditambahkan.');
+      showFeedback('classes', 'Kelas baru berhasil ditambahkan.', 'success');
     } catch (err) {
-      setFeedback(
+      showFeedback(
+        'classes',
         err instanceof Error ? err.message : 'Gagal menambahkan kelas.'
       );
     } finally {
@@ -313,18 +365,24 @@ export default function ManagePracticumScreen() {
         normalizeClassName(s.className) === classKey
     );
     if (isUsedBySession) {
-      setFeedback(
+      showFeedback(
+        'classes',
         `Kelas ${classDoc.name} tidak bisa dihapus karena masih dipakai sesi.`
       );
       return;
     }
     setBusy(true);
-    setFeedback(null);
+    clearFeedback('classes');
     try {
       await deleteClass(classDoc.id);
-      setFeedback(`Kelas ${classDoc.name} berhasil dihapus.`);
+      showFeedback(
+        'classes',
+        `Kelas ${classDoc.name} berhasil dihapus.`,
+        'success'
+      );
     } catch (err) {
-      setFeedback(
+      showFeedback(
+        'classes',
         err instanceof Error ? err.message : 'Gagal menghapus kelas.'
       );
     } finally {
@@ -333,16 +391,19 @@ export default function ManagePracticumScreen() {
   };
 
   const handleRetryMergeClasses = async () => {
-    setFeedback(null);
+    clearFeedback('classes');
     try {
       const summary = await mergeDuplicateClasses();
-      setFeedback(
+      showFeedback(
+        'classes',
         summary.removedClasses > 0
           ? `Penggabungan selesai: ${summary.removedClasses} kelas duplikat dihapus.`
-          : 'Tidak ada kelas duplikat untuk digabungkan.'
+          : 'Tidak ada kelas duplikat untuk digabungkan.',
+        summary.removedClasses > 0 ? 'success' : 'info'
       );
     } catch (err) {
-      setFeedback(
+      showFeedback(
+        'classes',
         err instanceof Error
           ? err.message
           : 'Gagal menggabungkan kelas duplikat.'
@@ -355,23 +416,31 @@ export default function ManagePracticumScreen() {
     const nim = studentNimInput.trim();
 
     if (!selectedParticipantClass) {
-      setFeedback('Kelas harus dipilih dari daftar kelas yang tersedia.');
+      showFeedback(
+        'participants',
+        'Kelas harus dipilih dari daftar kelas yang tersedia.'
+      );
       return;
     }
     if (!/^\d{8,12}$/.test(nim)) {
-      setFeedback('NIM wajib diisi dan harus berupa 8–12 digit angka.');
+      showFeedback(
+        'participants',
+        'NIM wajib diisi dan harus berupa 8–12 digit angka.'
+      );
       return;
     }
 
     const matches = students.filter((s) => (s.nim ?? '').trim() === nim);
     if (matches.length === 0) {
-      setFeedback(
+      showFeedback(
+        'participants',
         'NIM belum terdaftar sebagai akun praktikan. Pastikan praktikan sudah registrasi.'
       );
       return;
     }
     if (matches.length > 1) {
-      setFeedback(
+      showFeedback(
+        'participants',
         'NIM terdaftar pada lebih dari satu akun. Hubungi administrator.'
       );
       return;
@@ -380,12 +449,12 @@ export default function ManagePracticumScreen() {
     const account = matches[0];
     const resolvedName = sName || account.name;
     if (!resolvedName) {
-      setFeedback('Nama praktikan wajib diisi.');
+      showFeedback('participants', 'Nama praktikan wajib diisi.');
       return;
     }
 
     setBusy(true);
-    setFeedback(null);
+    clearFeedback('participants');
     try {
       await addParticipant({
         classId: selectedParticipantClass.name,
@@ -395,9 +464,14 @@ export default function ManagePracticumScreen() {
       });
       setStudentNameInput('');
       setStudentNimInput('');
-      setFeedback('Peserta berhasil ditambahkan ke kelas.');
+      showFeedback(
+        'participants',
+        'Peserta berhasil ditambahkan ke kelas.',
+        'success'
+      );
     } catch (err) {
-      setFeedback(
+      showFeedback(
+        'participants',
         err instanceof Error ? err.message : 'Gagal menambahkan peserta.'
       );
     } finally {
@@ -440,7 +514,7 @@ export default function ManagePracticumScreen() {
           {/* Tab Switcher */}
           <View style={styles.tabsRow}>
             <Pressable
-              onPress={() => setActiveTab('sessions')}
+              onPress={() => handleTabChange('sessions')}
               style={[
                 styles.tabBtn,
                 activeTab === 'sessions' && styles.tabBtnActive,
@@ -456,7 +530,7 @@ export default function ManagePracticumScreen() {
               </Text>
             </Pressable>
             <Pressable
-              onPress={() => setActiveTab('classes')}
+              onPress={() => handleTabChange('classes')}
               style={[
                 styles.tabBtn,
                 activeTab === 'classes' && styles.tabBtnActive,
@@ -472,7 +546,7 @@ export default function ManagePracticumScreen() {
               </Text>
             </Pressable>
             <Pressable
-              onPress={() => setActiveTab('participants')}
+              onPress={() => handleTabChange('participants')}
               style={[
                 styles.tabBtn,
                 activeTab === 'participants' && styles.tabBtnActive,
@@ -489,35 +563,26 @@ export default function ManagePracticumScreen() {
             </Pressable>
           </View>
 
-          {feedback ? (
-            <View style={styles.feedbackBox}>
-              <Text style={styles.feedbackText}>{feedback}</Text>
-            </View>
-          ) : null}
-
-          {mergingClasses ? (
-            <View style={styles.feedbackBox}>
-              <Text style={styles.feedbackText}>
-                Merapikan kelas duplikat...
-              </Text>
-            </View>
-          ) : null}
-
-          {classMergeError ? (
-            <View style={styles.feedbackBox}>
-              <Text style={styles.feedbackText}>{classMergeError}</Text>
-              <Pressable
-                onPress={handleRetryMergeClasses}
-                disabled={busy || mergingClasses}
-                style={[styles.primaryBtn, { marginTop: 8 }]}
-              >
-                <Text style={styles.primaryBtnText}>Coba Lagi</Text>
-              </Pressable>
-            </View>
-          ) : null}
-
           {activeTab === 'sessions' ? (
             <>
+              {feedbackByTab.sessions ? (
+                <View
+                  style={[
+                    styles.feedbackBox,
+                    feedbackByTab.sessions.tone === 'error' && styles.feedbackErrorBox,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.feedbackText,
+                      feedbackByTab.sessions.tone === 'error' && styles.feedbackErrorText,
+                    ]}
+                  >
+                    {feedbackByTab.sessions.message}
+                  </Text>
+                </View>
+              ) : null}
+
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>
                   {editingSessionId ? 'Ubah Sesi Praktikum' : 'Tambah Sesi Baru'}
@@ -560,7 +625,7 @@ export default function ManagePracticumScreen() {
                         Belum ada kelas. Tambahkan kelas di tab Kelas.
                       </Text>
                     ) : editingSessionId && className && !selectedClass ? (
-                      <Text style={styles.classWarning}>
+                      <Text style={styles.classError}>
                         Kelas sesi ini tidak lagi tersedia. Pilih kelas lain.
                       </Text>
                     ) : null}
@@ -683,6 +748,47 @@ export default function ManagePracticumScreen() {
 
           {activeTab === 'classes' ? (
             <>
+              {feedbackByTab.classes ? (
+                <View
+                  style={[
+                    styles.feedbackBox,
+                    feedbackByTab.classes.tone === 'error' && styles.feedbackErrorBox,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.feedbackText,
+                      feedbackByTab.classes.tone === 'error' && styles.feedbackErrorText,
+                    ]}
+                  >
+                    {feedbackByTab.classes.message}
+                  </Text>
+                </View>
+              ) : null}
+
+              {mergingClasses ? (
+                <View style={styles.feedbackBox}>
+                  <Text style={styles.feedbackText}>
+                    Merapikan kelas duplikat...
+                  </Text>
+                </View>
+              ) : null}
+
+              {classMergeError ? (
+                <View style={[styles.feedbackBox, styles.feedbackErrorBox]}>
+                  <Text style={[styles.feedbackText, styles.feedbackErrorText]}>
+                    {classMergeError}
+                  </Text>
+                  <Pressable
+                    onPress={handleRetryMergeClasses}
+                    disabled={busy || mergingClasses}
+                    style={[styles.primaryBtn, { marginTop: 8 }]}
+                  >
+                    <Text style={styles.primaryBtnText}>Coba Lagi</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>Tambah Kelas Praktikum</Text>
                 <Text style={styles.label}>
@@ -729,6 +835,24 @@ export default function ManagePracticumScreen() {
 
           {activeTab === 'participants' ? (
             <>
+              {feedbackByTab.participants ? (
+                <View
+                  style={[
+                    styles.feedbackBox,
+                    feedbackByTab.participants.tone === 'error' && styles.feedbackErrorBox,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.feedbackText,
+                      feedbackByTab.participants.tone === 'error' && styles.feedbackErrorText,
+                    ]}
+                  >
+                    {feedbackByTab.participants.message}
+                  </Text>
+                </View>
+              ) : null}
+
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>Tambah Peserta Kelas</Text>
 
@@ -758,7 +882,8 @@ export default function ManagePracticumScreen() {
                               if (matchedClass) {
                                 setSelectedClassId(matchedClass.name);
                               } else {
-                                setFeedback(
+                                showFeedback(
+                                  'participants',
                                   `Kelas ${studentClassName} milik ${std.name} belum terdaftar. Pilih kelas yang tersedia.`
                                 );
                               }
@@ -932,7 +1057,7 @@ export default function ManagePracticumScreen() {
               <Pressable
                 onPress={() => {
                   setClassPickerTarget(null);
-                  setActiveTab('classes');
+                  handleTabChange('classes');
                 }}
                 style={styles.primaryBtn}
               >
@@ -1010,10 +1135,17 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
   },
+  feedbackErrorBox: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
   feedbackText: {
     fontSize: 13,
     color: '#1E3A8A',
     fontWeight: '600',
+  },
+  feedbackErrorText: {
+    color: '#DC2626',
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -1083,6 +1215,12 @@ const styles = StyleSheet.create({
   classWarning: {
     fontSize: 11,
     color: '#B45309',
+    marginTop: -8,
+    marginBottom: 12,
+  },
+  classError: {
+    fontSize: 11,
+    color: '#DC2626',
     marginTop: -8,
     marginBottom: 12,
   },
