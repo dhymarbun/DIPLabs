@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { collection, getDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
@@ -29,6 +30,7 @@ import {
   AppUser,
   AttendanceContextValue,
   AttendanceRecord,
+  ClassMergeSummary,
   HybridRecordAttendanceReturn,
   Participant,
   PracticumClass,
@@ -36,6 +38,7 @@ import {
   RecordAttendanceResult,
   SessionStatus,
 } from '../types/attendance';
+import { groupClassesByName, normalizeClassName } from '../utils/classNames';
 import { useAuth } from './AuthContext';
 
 const AttendanceContext = createContext<AttendanceContextValue | undefined>(
@@ -73,6 +76,18 @@ export function AttendanceProvider({
     AttendanceRecord[]
   >(isFirebaseConfigured ? [] : MOCK_ATTENDANCE_RECORDS);
   const [attendanceError, setAttendanceError] = useState<string | null>(null);
+  const [classesReady, setClassesReady] = useState<boolean>(
+    !isFirebaseConfigured
+  );
+  const [participantsReady, setParticipantsReady] = useState<boolean>(
+    !isFirebaseConfigured
+  );
+  const [mergingClasses, setMergingClasses] = useState<boolean>(false);
+  const [classMergeError, setClassMergeError] = useState<string | null>(null);
+  const mergeInProgressRef = useRef<boolean>(false);
+  const lastMergeSignatureRef = useRef<string | null>(null);
+  const classesReadyUidRef = useRef<string | null>(null);
+  const participantsReadyUidRef = useRef<string | null>(null);
 
   const currentUser: AppUser | null = useMemo(() => {
     if (authUser) {
@@ -89,13 +104,23 @@ export function AttendanceProvider({
   }, [authUser, manualUser]);
 
   useEffect(() => {
+    lastMergeSignatureRef.current = null;
+    setClassMergeError(null);
     if (!isFirebaseConfigured || !authUser) {
       setSessionsLoading(false);
+      setClassesReady(true);
+      setParticipantsReady(true);
+      classesReadyUidRef.current = authUser?.uid ?? null;
+      participantsReadyUidRef.current = authUser?.uid ?? null;
       return;
     }
 
     setSessionsLoading(true);
     setAttendanceError(null);
+    setClassesReady(false);
+    setParticipantsReady(false);
+    classesReadyUidRef.current = null;
+    participantsReadyUidRef.current = null;
 
     const sessionQuery = authUser.role === 'asisten'
       ? query(collection(db, 'sessions'), where('assistantId', '==', authUser.uid))
@@ -173,6 +198,8 @@ export function AttendanceProvider({
             const d = docSnap.data();
             return { id: docSnap.id, name: String(d.name ?? ''), assistantIds: Array.isArray(d.assistantIds) ? d.assistantIds.map(String) : undefined };
           }));
+          classesReadyUidRef.current = authUser.uid;
+          setClassesReady(true);
         }, () => undefined)
       : () => undefined;
 
@@ -182,6 +209,8 @@ export function AttendanceProvider({
             const d = docSnap.data();
             return { classId: String(d.classId ?? ''), studentId: String(d.studentId ?? ''), studentName: String(d.studentName ?? ''), nim: d.nim ? String(d.nim) : undefined };
           }));
+          participantsReadyUidRef.current = authUser.uid;
+          setParticipantsReady(true);
         }, () => undefined)
       : () => undefined;
 
@@ -480,8 +509,24 @@ export function AttendanceProvider({
 
   const addClass = useCallback(
     async (data: Omit<PracticumClass, 'id'>) => {
+      const normalizedName = normalizeClassName(data.name);
+      if (!normalizedName) {
+        throw new Error('Nama kelas wajib diisi.');
+      }
+      if (
+        classes.some(
+          (c) => normalizeClassName(c.name) === normalizedName
+        )
+      ) {
+        throw new Error('Nama kelas sudah ada.');
+      }
       if (isFirebaseConfigured && authUser) {
-        await createClassDoc(data);
+        const classId = await createClassDoc(data);
+        setClasses((prev) =>
+          prev.some((c) => c.id === classId)
+            ? prev
+            : [...prev, { ...data, id: classId }]
+        );
       } else {
         setClasses((prev) => [
           ...prev,
@@ -489,7 +534,7 @@ export function AttendanceProvider({
         ]);
       }
     },
-    [authUser]
+    [authUser, classes]
   );
 
   const updateClass = useCallback(
@@ -514,10 +559,311 @@ export function AttendanceProvider({
     [authUser]
   );
 
+  const mergeDuplicateClasses = useCallback(async (): Promise<ClassMergeSummary> => {
+    const summary: ClassMergeSummary = {
+      mergedGroups: 0,
+      removedClasses: 0,
+      movedParticipants: 0,
+      updatedSessions: 0,
+    };
+
+    const duplicateGroups = groupClassesByName(classes).filter(
+      (group) => group.classes.length > 1
+    );
+    if (duplicateGroups.length === 0) {
+      setClassMergeError(null);
+      return summary;
+    }
+    if (mergeInProgressRef.current) {
+      return summary;
+    }
+
+    mergeInProgressRef.current = true;
+    setMergingClasses(true);
+    setClassMergeError(null);
+
+    try {
+      for (const group of duplicateGroups) {
+        const groupIds = new Set(group.classes.map((c) => c.id));
+        const groupKeys = new Set(
+          group.classes.map((c) => normalizeClassName(c.name))
+        );
+
+        const groupParticipants = participants.filter(
+          (p) =>
+            groupIds.has(p.classId) ||
+            groupKeys.has(normalizeClassName(p.classId))
+        );
+        const groupSessions = allSessions.filter(
+          (s) =>
+            (!!s.classId && groupIds.has(s.classId)) ||
+            groupKeys.has(normalizeClassName(s.className))
+        );
+
+        const scoreClass = (classDoc: PracticumClass) => ({
+          participants: groupParticipants.filter(
+            (p) =>
+              p.classId === classDoc.id ||
+              p.classId.trim() === classDoc.name.trim()
+          ).length,
+          sessions: groupSessions.filter(
+            (s) =>
+              s.classId === classDoc.id ||
+              s.className.trim() === classDoc.name.trim()
+          ).length,
+        });
+
+        const canonical = [...group.classes].sort((a, b) => {
+          const scoreA = scoreClass(a);
+          const scoreB = scoreClass(b);
+          if (scoreA.participants !== scoreB.participants) {
+            return scoreB.participants - scoreA.participants;
+          }
+          if (scoreA.sessions !== scoreB.sessions) {
+            return scoreB.sessions - scoreA.sessions;
+          }
+          return a.id.localeCompare(b.id);
+        })[0];
+
+        const canonicalName = canonical.name.trim();
+        const duplicates = group.classes.filter(
+          (c) => c.id !== canonical.id
+        );
+        const assistantIds = Array.from(
+          new Set(
+            group.classes.flatMap((c) => c.assistantIds ?? [])
+          )
+        );
+
+        const participantsByStudent = new Map<string, Participant>();
+        for (const participant of groupParticipants) {
+          const existing = participantsByStudent.get(
+            participant.studentId
+          );
+          if (!existing) {
+            participantsByStudent.set(
+              participant.studentId,
+              participant
+            );
+            continue;
+          }
+          const existingIsCanonical =
+            existing.classId === canonicalName ||
+            existing.classId === canonical.id;
+          const nextIsCanonical =
+            participant.classId === canonicalName ||
+            participant.classId === canonical.id;
+          if (
+            (!existingIsCanonical && nextIsCanonical) ||
+            (!existing.nim && participant.nim)
+          ) {
+            participantsByStudent.set(
+              participant.studentId,
+              participant
+            );
+          }
+        }
+
+        const mergedParticipants = Array.from(
+          participantsByStudent.values()
+        );
+        const mergedStudentIds = mergedParticipants.map(
+          (p) => p.studentId
+        );
+
+        const canonicalAssistantIds = canonical.assistantIds ?? [];
+        const assistantsChanged =
+          assistantIds.length !== canonicalAssistantIds.length ||
+          assistantIds.some(
+            (id) => !canonicalAssistantIds.includes(id)
+          );
+        if (isFirebaseConfigured && authUser) {
+          if (
+            canonical.name !== canonicalName ||
+            assistantsChanged
+          ) {
+            await updateClassDoc(canonical.id, {
+              name: canonicalName,
+              assistantIds,
+            });
+          }
+        }
+
+        for (const participant of mergedParticipants) {
+          const targetClassId = canonicalName;
+          const targetDocId = `${targetClassId}_${participant.studentId}`;
+          if (participant.classId !== targetClassId) {
+            if (isFirebaseConfigured && authUser) {
+              await upsertParticipantDoc({
+                ...participant,
+                classId: targetClassId,
+              });
+            }
+            summary.movedParticipants += 1;
+          }
+          const staleDocs = groupParticipants.filter(
+            (candidate) =>
+              candidate.studentId === participant.studentId &&
+              `${candidate.classId}_${candidate.studentId}` !==
+                targetDocId
+          );
+          for (const staleDoc of staleDocs) {
+            if (isFirebaseConfigured && authUser) {
+              await removeParticipantDoc(
+                `${staleDoc.classId}_${staleDoc.studentId}`
+              );
+            }
+          }
+        }
+
+        for (const session of groupSessions) {
+          const participantIdsChanged =
+            JSON.stringify(session.participantIds ?? []) !==
+            JSON.stringify(mergedStudentIds);
+          if (
+            session.className !== canonicalName ||
+            session.classId !== canonical.id ||
+            participantIdsChanged
+          ) {
+            if (isFirebaseConfigured && authUser) {
+              await updateSessionDoc(session.id, {
+                className: canonicalName,
+                classId: canonical.id,
+                participantIds: mergedStudentIds,
+              });
+            }
+            summary.updatedSessions += 1;
+          }
+        }
+
+        for (const duplicate of duplicates) {
+          if (isFirebaseConfigured && authUser) {
+            await deleteClassDoc(duplicate.id);
+          }
+          summary.removedClasses += 1;
+        }
+
+        setClasses((prev) => {
+          const duplicateIds = new Set(
+            duplicates.map((c) => c.id)
+          );
+          return prev
+            .filter((c) => !duplicateIds.has(c.id))
+            .map((c) =>
+              c.id === canonical.id
+                ? { ...c, name: canonicalName, assistantIds }
+                : c
+            );
+        });
+        setParticipants((prev) => {
+          const remaining = prev.filter(
+            (p) =>
+              !groupIds.has(p.classId) &&
+              !groupKeys.has(normalizeClassName(p.classId))
+          );
+          return [
+            ...remaining,
+            ...mergedParticipants.map((p) => ({
+              ...p,
+              classId: canonicalName,
+            })),
+          ];
+        });
+        const groupSessionIds = new Set(
+          groupSessions.map((s) => s.id)
+        );
+        setAllSessions((prev) =>
+          prev.map((s) =>
+            groupSessionIds.has(s.id)
+              ? {
+                  ...s,
+                  className: canonicalName,
+                  classId: canonical.id,
+                  participantIds: mergedStudentIds,
+                }
+              : s
+          )
+        );
+
+        summary.mergedGroups += 1;
+      }
+
+      setClassMergeError(null);
+      return summary;
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Gagal menggabungkan kelas duplikat.';
+      setClassMergeError(message);
+      throw err;
+    } finally {
+      mergeInProgressRef.current = false;
+      setMergingClasses(false);
+    }
+  }, [allSessions, authUser, classes, participants]);
+
+  useEffect(() => {
+    if (!authUser || authUser.role !== 'asisten') return;
+    if (
+      !classesReady ||
+      !participantsReady ||
+      classesReadyUidRef.current !== authUser.uid ||
+      participantsReadyUidRef.current !== authUser.uid ||
+      sessionsLoading
+    ) {
+      return;
+    }
+    if (mergeInProgressRef.current) return;
+
+    const duplicateGroups = groupClassesByName(classes).filter(
+      (group) => group.classes.length > 1
+    );
+    if (duplicateGroups.length === 0) {
+      lastMergeSignatureRef.current = null;
+      return;
+    }
+
+    const signature = duplicateGroups
+      .map((group) =>
+        group.classes
+          .map((c) => c.id)
+          .sort()
+          .join(',')
+      )
+      .sort()
+      .join('|');
+    if (lastMergeSignatureRef.current === signature) return;
+
+    lastMergeSignatureRef.current = signature;
+    void mergeDuplicateClasses().catch(() => undefined);
+  }, [
+    authUser,
+    classes,
+    classesReady,
+    mergeDuplicateClasses,
+    participantsReady,
+    sessionsLoading,
+  ]);
+
   const seedInitialData = useCallback(async () => {
     if (!isFirebaseConfigured || !authUser) return;
-    await createClassDoc({ name: 'K-01', assistantIds: [authUser.uid] });
-    await createClassDoc({ name: 'K-02', assistantIds: [authUser.uid] });
+    const ensureClass = async (name: string) => {
+      const normalizedName = normalizeClassName(name);
+      if (
+        classes.some(
+          (c) => normalizeClassName(c.name) === normalizedName
+        )
+      ) {
+        return;
+      }
+      await createClassDoc({
+        name,
+        assistantIds: [authUser.uid],
+      });
+    };
+    await ensureClass('K-01');
+    await ensureClass('K-02');
     for (const s of MOCK_SESSIONS) {
       await createSessionDoc({
         practicalName: s.practicalName,
@@ -531,7 +877,7 @@ export function AttendanceProvider({
         participantIds: [],
       });
     }
-  }, [authUser]);
+  }, [authUser, classes]);
 
   const contextValue = useMemo<AttendanceContextValue>(
     () => ({
@@ -555,6 +901,9 @@ export function AttendanceProvider({
       classes,
       participants,
       attendanceError,
+      mergingClasses,
+      classMergeError,
+      mergeDuplicateClasses,
       addClass,
       updateClass,
       deleteClass,
@@ -580,6 +929,9 @@ export function AttendanceProvider({
       classes,
       participants,
       attendanceError,
+      mergingClasses,
+      classMergeError,
+      mergeDuplicateClasses,
       addClass,
       updateClass,
       deleteClass,

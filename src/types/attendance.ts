@@ -26,6 +26,13 @@ export type PracticumClass = {
   assistantIds?: string[];
 };
 
+export type ClassMergeSummary = {
+  mergedGroups: number;
+  removedClasses: number;
+  movedParticipants: number;
+  updatedSessions: number;
+};
+
 export type Participant = {
   classId: string;
   studentId: string;
@@ -145,6 +152,9 @@ export type AttendanceContextValue = {
   classes: PracticumClass[];
   participants: Participant[];
   attendanceError: string | null;
+  mergingClasses: boolean;
+  classMergeError: string | null;
+  mergeDuplicateClasses: () => Promise<ClassMergeSummary>;
   addClass: (data: Omit<PracticumClass, 'id'>) => Promise<void>;
   updateClass: (
     classId: string,

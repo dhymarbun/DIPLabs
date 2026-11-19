@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -12,7 +13,8 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { useAttendance } from '../../context/AttendanceContext';
-import { PracticumSession } from '../../types/attendance';
+import { PracticumClass, PracticumSession } from '../../types/attendance';
+import { normalizeClassName } from '../../utils/classNames';
 
 type TabKey = 'sessions' | 'classes' | 'participants';
 
@@ -68,6 +70,9 @@ export default function ManagePracticumScreen() {
     deleteClass,
     addParticipant,
     removeParticipant,
+    mergingClasses,
+    classMergeError,
+    mergeDuplicateClasses,
   } = useAttendance();
 
   const [activeTab, setActiveTab] = useState<TabKey>('sessions');
@@ -77,7 +82,10 @@ export default function ManagePracticumScreen() {
   // Session form state
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [practicalName, setPracticalName] = useState<string>('');
-  const [className, setClassName] = useState<string>('K-01');
+  const [className, setClassName] = useState<string>('');
+  const [classPickerTarget, setClassPickerTarget] = useState<
+    'session' | 'participant' | null
+  >(null);
   const [date, setDate] = useState<string>(() => getTodayDateString());
   const [startTime, setStartTime] = useState<string>('08:00');
   const [endTime, setEndTime] = useState<string>('10:00');
@@ -87,16 +95,41 @@ export default function ManagePracticumScreen() {
   const [newClassName, setNewClassName] = useState<string>('');
 
   // Participant form state
-  const [selectedClassId, setSelectedClassId] = useState<string>(
-    classes[0]?.name ?? 'K-01'
-  );
+  const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [studentNameInput, setStudentNameInput] = useState<string>('');
   const [studentNimInput, setStudentNimInput] = useState<string>('');
+
+  const selectedClass =
+    classes.find((c) => c.name === className || c.id === className) ?? null;
+  const selectedParticipantClass =
+    classes.find((c) => c.name === selectedClassId) ?? null;
+
+  useEffect(() => {
+    if (editingSessionId) return;
+    if (classes.length === 0) {
+      setClassName('');
+      return;
+    }
+    const hasSelection = classes.some(
+      (c) => c.name === className || c.id === className
+    );
+    if (!hasSelection) {
+      setClassName(classes[0].name);
+    }
+  }, [classes, className, editingSessionId]);
+
+  useEffect(() => {
+    if (!selectedClassId) return;
+    const stillExists = classes.some((c) => c.name === selectedClassId);
+    if (!stillExists) {
+      setSelectedClassId('');
+    }
+  }, [classes, selectedClassId]);
 
   const resetSessionForm = () => {
     setEditingSessionId(null);
     setPracticalName('');
-    setClassName('K-01');
+    setClassName(classes[0]?.name ?? '');
     setDate(getTodayDateString());
     setStartTime('08:00');
     setEndTime('10:00');
@@ -172,25 +205,28 @@ export default function ManagePracticumScreen() {
       return;
     }
 
+    const classDoc = classes.find(
+      (c) => c.id === nextClassName || c.name === nextClassName
+    );
+    if (!classDoc) {
+      setFeedback('Kelas harus dipilih dari daftar kelas yang tersedia.');
+      return;
+    }
+    const canonicalClassName = classDoc.name;
+
     setBusy(true);
     setFeedback(null);
     try {
-      const classDoc = classes.find(
-        (c) => c.id === nextClassName || c.name === nextClassName
-      );
-      const classKeys = new Set<string>([nextClassName]);
-      if (classDoc) {
-        classKeys.add(classDoc.id);
-        classKeys.add(classDoc.name);
-      }
       const classParticipants = participants
-        .filter((p) => classKeys.has(p.classId))
+        .filter(
+          (p) => p.classId === classDoc.id || p.classId === classDoc.name
+        )
         .map((p) => p.studentId);
 
       if (editingSessionId) {
         await updateSession(editingSessionId, {
           practicalName: nextPracticalName,
-          className: nextClassName,
+          className: canonicalClassName,
           date: nextDate,
           startTime: nextStartTime,
           endTime: nextEndTime,
@@ -201,7 +237,7 @@ export default function ManagePracticumScreen() {
       } else {
         await addSession({
           practicalName: nextPracticalName,
-          className: nextClassName,
+          className: canonicalClassName,
           date: nextDate,
           startTime: nextStartTime,
           endTime: nextEndTime,
@@ -238,15 +274,24 @@ export default function ManagePracticumScreen() {
   };
 
   const handleAddClass = async () => {
-    if (!newClassName.trim()) {
+    const normalizedClassName = newClassName.trim();
+    if (!normalizedClassName) {
       setFeedback('Nama kelas wajib diisi.');
+      return;
+    }
+    const classNameKey = normalizeClassName(normalizedClassName);
+    const isDuplicate = classes.some(
+      (c) => normalizeClassName(c.name) === classNameKey
+    );
+    if (isDuplicate) {
+      setFeedback('Nama kelas sudah ada.');
       return;
     }
     setBusy(true);
     setFeedback(null);
     try {
       await addClass({
-        name: newClassName.trim(),
+        name: normalizedClassName,
         assistantIds: authUser ? [authUser.uid] : [],
       });
       setNewClassName('');
@@ -260,13 +305,57 @@ export default function ManagePracticumScreen() {
     }
   };
 
+  const handleDeleteClass = async (classDoc: PracticumClass) => {
+    const classKey = normalizeClassName(classDoc.name);
+    const isUsedBySession = sessions.some(
+      (s) =>
+        s.className === classDoc.id ||
+        normalizeClassName(s.className) === classKey
+    );
+    if (isUsedBySession) {
+      setFeedback(
+        `Kelas ${classDoc.name} tidak bisa dihapus karena masih dipakai sesi.`
+      );
+      return;
+    }
+    setBusy(true);
+    setFeedback(null);
+    try {
+      await deleteClass(classDoc.id);
+      setFeedback(`Kelas ${classDoc.name} berhasil dihapus.`);
+    } catch (err) {
+      setFeedback(
+        err instanceof Error ? err.message : 'Gagal menghapus kelas.'
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRetryMergeClasses = async () => {
+    setFeedback(null);
+    try {
+      const summary = await mergeDuplicateClasses();
+      setFeedback(
+        summary.removedClasses > 0
+          ? `Penggabungan selesai: ${summary.removedClasses} kelas duplikat dihapus.`
+          : 'Tidak ada kelas duplikat untuk digabungkan.'
+      );
+    } catch (err) {
+      setFeedback(
+        err instanceof Error
+          ? err.message
+          : 'Gagal menggabungkan kelas duplikat.'
+      );
+    }
+  };
+
   const handleAddParticipant = async () => {
-    const cId = selectedClassId.trim();
     const sName = studentNameInput.trim();
     const nim = studentNimInput.trim();
 
-    if (!cId) {
-      setFeedback('Kelas wajib diisi.');
+    if (!selectedParticipantClass) {
+      setFeedback('Kelas harus dipilih dari daftar kelas yang tersedia.');
       return;
     }
     if (!/^\d{8,12}$/.test(nim)) {
@@ -299,7 +388,7 @@ export default function ManagePracticumScreen() {
     setFeedback(null);
     try {
       await addParticipant({
-        classId: cId,
+        classId: selectedParticipantClass.name,
         studentId: account.id,
         studentName: resolvedName,
         nim,
@@ -406,6 +495,27 @@ export default function ManagePracticumScreen() {
             </View>
           ) : null}
 
+          {mergingClasses ? (
+            <View style={styles.feedbackBox}>
+              <Text style={styles.feedbackText}>
+                Merapikan kelas duplikat...
+              </Text>
+            </View>
+          ) : null}
+
+          {classMergeError ? (
+            <View style={styles.feedbackBox}>
+              <Text style={styles.feedbackText}>{classMergeError}</Text>
+              <Pressable
+                onPress={handleRetryMergeClasses}
+                disabled={busy || mergingClasses}
+                style={[styles.primaryBtn, { marginTop: 8 }]}
+              >
+                <Text style={styles.primaryBtnText}>Coba Lagi</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
           {activeTab === 'sessions' ? (
             <>
               <View style={styles.card}>
@@ -429,13 +539,31 @@ export default function ManagePracticumScreen() {
                     <Text style={styles.label}>
                       Kelas<Text style={styles.requiredMark}> *</Text>
                     </Text>
-                    <TextInput
-                      value={className}
-                      onChangeText={setClassName}
-                      placeholder="K-01"
-                      placeholderTextColor="#94A3B8"
-                      style={styles.input}
-                    />
+                    <Pressable
+                      onPress={() => setClassPickerTarget('session')}
+                      style={styles.classSelect}
+                    >
+                      <Text
+                        style={[
+                          styles.classSelectText,
+                          !selectedClass && styles.classSelectPlaceholder,
+                        ]}
+                      >
+                        {selectedClass?.name ?? 'Pilih kelas'}
+                      </Text>
+                      <Text style={styles.classSelectAction}>
+                        {selectedClass ? 'Ganti' : 'Pilih'}
+                      </Text>
+                    </Pressable>
+                    {classes.length === 0 ? (
+                      <Text style={styles.classWarning}>
+                        Belum ada kelas. Tambahkan kelas di tab Kelas.
+                      </Text>
+                    ) : editingSessionId && className && !selectedClass ? (
+                      <Text style={styles.classWarning}>
+                        Kelas sesi ini tidak lagi tersedia. Pilih kelas lain.
+                      </Text>
+                    ) : null}
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>
@@ -569,7 +697,7 @@ export default function ManagePracticumScreen() {
                 />
                 <Pressable
                   onPress={handleAddClass}
-                  disabled={busy}
+                  disabled={busy || mergingClasses}
                   style={styles.primaryBtn}
                 >
                   <Text style={styles.primaryBtnText}>Tambah Kelas</Text>
@@ -586,7 +714,7 @@ export default function ManagePracticumScreen() {
                       <View key={c.id} style={styles.itemRow}>
                         <Text style={styles.itemTitle}>Kelas {c.name}</Text>
                         <Pressable
-                          onPress={() => deleteClass(c.id)}
+                          onPress={() => handleDeleteClass(c)}
                           style={styles.deleteBadge}
                         >
                           <Text style={styles.deleteBadgeText}>Hapus</Text>
@@ -620,8 +748,20 @@ export default function ManagePracticumScreen() {
                           onPress={() => {
                             setStudentNameInput(std.name);
                             setStudentNimInput(std.nim ?? '');
-                            if (std.className) {
-                              setSelectedClassId(std.className);
+                            const studentClassName = std.className;
+                            if (studentClassName) {
+                              const matchedClass = classes.find(
+                                (c) =>
+                                  normalizeClassName(c.name) ===
+                                  normalizeClassName(studentClassName)
+                              );
+                              if (matchedClass) {
+                                setSelectedClassId(matchedClass.name);
+                              } else {
+                                setFeedback(
+                                  `Kelas ${studentClassName} milik ${std.name} belum terdaftar. Pilih kelas yang tersedia.`
+                                );
+                              }
                             }
                           }}
                           style={styles.quickPickChip}
@@ -638,13 +778,27 @@ export default function ManagePracticumScreen() {
                 <Text style={styles.label}>
                   Kelas<Text style={styles.requiredMark}> *</Text>
                 </Text>
-                <TextInput
-                  value={selectedClassId}
-                  onChangeText={setSelectedClassId}
-                  placeholder="K-01"
-                  placeholderTextColor="#94A3B8"
-                  style={styles.input}
-                />
+                <Pressable
+                  onPress={() => setClassPickerTarget('participant')}
+                  style={styles.classSelect}
+                >
+                  <Text
+                    style={[
+                      styles.classSelectText,
+                      !selectedParticipantClass && styles.classSelectPlaceholder,
+                    ]}
+                  >
+                    {selectedParticipantClass?.name ?? 'Pilih kelas'}
+                  </Text>
+                  <Text style={styles.classSelectAction}>
+                    {selectedParticipantClass ? 'Ganti' : 'Pilih'}
+                  </Text>
+                </Pressable>
+                {classes.length === 0 ? (
+                  <Text style={styles.classWarning}>
+                    Belum ada kelas. Tambahkan kelas di tab Kelas.
+                  </Text>
+                ) : null}
 
                 <Text style={styles.label}>Nama Praktikan</Text>
                 <TextInput
@@ -673,7 +827,7 @@ export default function ManagePracticumScreen() {
 
                 <Pressable
                   onPress={handleAddParticipant}
-                  disabled={busy}
+                  disabled={busy || classes.length === 0}
                   style={styles.primaryBtn}
                 >
                   <Text style={styles.primaryBtnText}>Simpan Peserta</Text>
@@ -714,6 +868,86 @@ export default function ManagePracticumScreen() {
           ) : null}
         </View>
       </ScrollView>
+
+      <Modal
+        visible={classPickerTarget !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setClassPickerTarget(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>
+              {classPickerTarget === 'participant'
+                ? 'Pilih Kelas Peserta'
+                : 'Pilih Kelas Sesi'}
+            </Text>
+            {classes.length === 0 ? (
+              <Text style={styles.emptyText}>
+                Belum ada kelas. Tambahkan kelas terlebih dahulu.
+              </Text>
+            ) : (
+              <ScrollView
+                style={styles.modalList}
+                contentContainerStyle={styles.modalListContent}
+              >
+                {classes.map((c) => {
+                  const isSelected =
+                    classPickerTarget === 'participant'
+                      ? selectedParticipantClass?.id === c.id
+                      : selectedClass?.id === c.id || className === c.name;
+                  return (
+                    <Pressable
+                      key={c.id}
+                      onPress={() => {
+                        if (classPickerTarget === 'participant') {
+                          setSelectedClassId(c.name);
+                        } else {
+                          setClassName(c.name);
+                        }
+                        setClassPickerTarget(null);
+                      }}
+                      style={[
+                        styles.modalOption,
+                        isSelected && styles.modalOptionActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.modalOptionText,
+                          isSelected && styles.modalOptionTextActive,
+                        ]}
+                      >
+                        {c.name}
+                      </Text>
+                      {isSelected ? (
+                        <Text style={styles.modalOptionMark}>Dipilih</Text>
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            )}
+            {classes.length === 0 ? (
+              <Pressable
+                onPress={() => {
+                  setClassPickerTarget(null);
+                  setActiveTab('classes');
+                }}
+                style={styles.primaryBtn}
+              >
+                <Text style={styles.primaryBtnText}>Buka Tab Kelas</Text>
+              </Pressable>
+            ) : null}
+            <Pressable
+              onPress={() => setClassPickerTarget(null)}
+              style={styles.secondaryBtn}
+            >
+              <Text style={styles.secondaryBtnText}>Tutup</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -819,6 +1053,94 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginTop: -8,
     marginBottom: 12,
+  },
+  classSelect: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    backgroundColor: '#F8FAFC',
+    marginBottom: 12,
+    gap: 8,
+  },
+  classSelectText: {
+    fontSize: 13,
+    color: '#0F172A',
+    flex: 1,
+  },
+  classSelectPlaceholder: {
+    color: '#94A3B8',
+  },
+  classSelectAction: {
+    fontSize: 12,
+    color: '#2563EB',
+    fontWeight: '600',
+  },
+  classWarning: {
+    fontSize: 11,
+    color: '#B45309',
+    marginTop: -8,
+    marginBottom: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 420,
+    maxHeight: '80%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    gap: 10,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  modalList: {
+    maxHeight: 340,
+  },
+  modalListContent: {
+    gap: 8,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#F8FAFC',
+    gap: 8,
+  },
+  modalOptionActive: {
+    borderColor: '#2563EB',
+    backgroundColor: '#EFF6FF',
+  },
+  modalOptionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  modalOptionTextActive: {
+    color: '#1D4ED8',
+  },
+  modalOptionMark: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1D4ED8',
   },
   row: {
     flexDirection: 'row',
