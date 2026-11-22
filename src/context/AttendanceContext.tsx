@@ -39,6 +39,7 @@ import {
   SessionStatus,
 } from '../types/attendance';
 import { groupClassesByName, normalizeClassName } from '../utils/classNames';
+import { getScheduleStatus } from '../utils/sessionSchedule';
 import { useAuth } from './AuthContext';
 
 const AttendanceContext = createContext<AttendanceContextValue | undefined>(
@@ -266,13 +267,33 @@ export function AttendanceProvider({
   }, [allSessions, authUser, participants]);
 
   const openSession = useCallback(async (sessionId: string) => {
+    const targetSession = allSessions.find((s) => s.id === sessionId);
+    if (!targetSession) {
+      throw new Error('Sesi tidak ditemukan.');
+    }
+    if (targetSession.status !== 'upcoming') {
+      throw new Error('Sesi sudah dibuka atau ditutup.');
+    }
+
+    const scheduleStatus = getScheduleStatus(targetSession);
+    if (scheduleStatus === 'before') {
+      throw new Error(
+        `Sesi belum dapat dibuka. Jadwal: ${targetSession.date} pukul ${targetSession.startTime}–${targetSession.endTime} WIB.`
+      );
+    }
+    if (scheduleStatus === 'after') {
+      throw new Error(
+        `Jadwal sesi telah lewat (${targetSession.date} pukul ${targetSession.startTime}–${targetSession.endTime} WIB).`
+      );
+    }
+
     setAllSessions((prev) =>
       prev.map((s) => (s.id === sessionId ? { ...s, status: 'open' } : s))
     );
     if (isFirebaseConfigured && authUser) {
       await updateSessionDoc(sessionId, { status: 'open' });
     }
-  }, [authUser]);
+  }, [allSessions, authUser]);
 
   const closeSession = useCallback(async (sessionId: string) => {
     setAllSessions((prev) =>

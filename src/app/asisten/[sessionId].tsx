@@ -13,6 +13,7 @@ import { ConfirmActionModal } from '../../components/asisten/ConfirmActionModal'
 import { formatIndonesianDate } from '../../components/asisten/SessionCard';
 import { StatusBadge } from '../../components/asisten/StatusBadge';
 import { useAttendance } from '../../context/AttendanceContext';
+import { getScheduleStatus, getScheduleMessage } from '../../utils/sessionSchedule';
 
 export function formatCheckInTime(isoString: string): string {
   const date = new Date(isoString);
@@ -84,6 +85,10 @@ export default function AsistenSessionDetailScreen() {
   }
 
   const totalParticipants = session.participantIds?.length ?? 0;
+
+  const scheduleStatus = getScheduleStatus(session);
+  const scheduleMessage = getScheduleMessage(session);
+  const canOpenBySchedule = scheduleStatus === 'within' && session.status === 'upcoming';
 
   const handleConfirmAction = async () => {
     if (!pendingAction) return;
@@ -184,14 +189,20 @@ export default function AsistenSessionDetailScreen() {
               </View>
             </View>
 
+            {scheduleMessage && (
+              <View style={styles.scheduleMessage}>
+                <Text style={styles.scheduleMessageText}>{scheduleMessage}</Text>
+              </View>
+            )}
+
             {/* Tombol Buka / Tutup Sesi */}
             <View style={styles.actionRow}>
               <Pressable
-                disabled={session.status === 'open' || processing}
+                disabled={!canOpenBySchedule || session.status === 'open' || processing}
                 onPress={() => setPendingAction('open')}
                 style={[
                   styles.actionBtn,
-                  session.status === 'open' || processing
+                  session.status === 'open' || processing || !canOpenBySchedule
                     ? styles.btnDisabled
                     : styles.openBtn,
                 ]}
@@ -482,5 +493,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '600',
+  },
+  scheduleMessage: {
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+  },
+  scheduleMessageText: {
+    fontSize: 13,
+    color: '#92400E',
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
