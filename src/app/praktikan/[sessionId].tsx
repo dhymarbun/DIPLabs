@@ -35,7 +35,7 @@ export default function PraktikanSessionDetailScreen() {
     recordAttendance,
     getAttendanceForStudent,
   } = useAttendance();
-  const { submitPermission } = usePermissions();
+  const { submitPermission, myPermissions } = usePermissions();
   const [permissionReason, setPermissionReason] = useState('');
   const [permissionFeedback, setPermissionFeedback] = useState<string | null>(null);
   const [permissionSubmitting, setPermissionSubmitting] = useState(false);
@@ -61,9 +61,16 @@ export default function PraktikanSessionDetailScreen() {
     text: string;
   } | null>(null);
 
+  const hasPermissionForSession = useMemo(
+    () => myPermissions.some((p) => p.sessionId === session?.id),
+    [myPermissions, session?.id]
+  );
+
   const isPraktikan = currentUser?.role === 'praktikan';
   const canCheckIn =
-    isPraktikan && session?.status === 'open' && !myRecord;
+    isPraktikan && session?.status === 'open' && !myRecord && !hasPermissionForSession;
+
+  const canSubmitPermission = session?.status === 'open';
 
   const isParticipant = session?.participantIds?.includes(
     currentUser?.id ?? ''
@@ -221,6 +228,13 @@ export default function PraktikanSessionDetailScreen() {
                   Kehadiran Anda tercatat pada sesi ini.
                 </Text>
               </View>
+            ) : hasPermissionForSession ? (
+              <View style={styles.infoBox}>
+                <Text style={styles.infoBoxTitle}>Pengajuan izin tercatat</Text>
+                <Text style={styles.infoBoxSub}>
+                  Anda sudah mengajukan izin untuk sesi ini. Presensi tidak dapat dilakukan.
+                </Text>
+              </View>
             ) : session.status === 'upcoming' ? (
               <View style={styles.infoBox}>
                 <Text style={styles.infoBoxTitle}>Sesi belum dibuka</Text>
@@ -260,37 +274,54 @@ export default function PraktikanSessionDetailScreen() {
 
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Ajukan Izin</Text>
-            <Text style={styles.permissionHelp}>
-              Tulis alasan ketidakhadiran. Sistem memberi klasifikasi AI sebagai informasi pendukung;
-              keputusan akhir tetap oleh asisten.
-            </Text>
-            <Text style={styles.permissionLabel}>
-              Alasan Izin<Text style={styles.requiredMark}> *</Text>
-            </Text>
-            <TextInput
-              value={permissionReason}
-              onChangeText={setPermissionReason}
-              placeholder="Contoh: sedang sakit dan perlu istirahat"
-              multiline
-              editable={!permissionSubmitting}
-              style={styles.permissionInput}
-            />
-            {permissionFeedback ? (
-              <Text style={styles.permissionFeedback}>{permissionFeedback}</Text>
-            ) : null}
-            <Pressable
-              onPress={handleSubmitPermission}
-              disabled={permissionSubmitting || !permissionReason.trim()}
-              style={({ pressed }) => [
-                styles.permissionBtn,
-                (permissionSubmitting || !permissionReason.trim()) && styles.presensiBtnDisabled,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={styles.presensiBtnText}>
-                {permissionSubmitting ? 'Mengirim...' : 'Kirim Pengajuan Izin'}
-              </Text>
-            </Pressable>
+            {!canSubmitPermission ? (
+              <View style={styles.infoBox}>
+                <Text style={styles.infoBoxTitle}>
+                  {session?.status === 'upcoming'
+                    ? 'Pengajuan izin tidak tersedia'
+                    : 'Sesi sudah ditutup'}
+                </Text>
+                <Text style={styles.infoBoxSub}>
+                  {session?.status === 'upcoming'
+                    ? 'Pengajuan izin hanya dapat dilakukan saat sesi dibuka.'
+                    : 'Sesi sudah ditutup. Pengajuan izin tidak dapat dilakukan.'}
+                </Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.permissionHelp}>
+                  Tulis alasan ketidakhadiran. Sistem memberi klasifikasi AI sebagai informasi pendukung;
+                  keputusan akhir tetap oleh asisten.
+                </Text>
+                <Text style={styles.permissionLabel}>
+                  Alasan Izin<Text style={styles.requiredMark}> *</Text>
+                </Text>
+                <TextInput
+                  value={permissionReason}
+                  onChangeText={setPermissionReason}
+                  placeholder="Contoh: sedang sakit dan perlu istirahat"
+                  multiline
+                  editable={!permissionSubmitting}
+                  style={styles.permissionInput}
+                />
+                {permissionFeedback ? (
+                  <Text style={styles.permissionFeedback}>{permissionFeedback}</Text>
+                ) : null}
+                <Pressable
+                  onPress={handleSubmitPermission}
+                  disabled={permissionSubmitting || !permissionReason.trim()}
+                  style={({ pressed }) => [
+                    styles.permissionBtn,
+                    (permissionSubmitting || !permissionReason.trim()) && styles.presensiBtnDisabled,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text style={styles.presensiBtnText}>
+                    {permissionSubmitting ? 'Mengirim...' : 'Kirim Pengajuan Izin'}
+                  </Text>
+                </Pressable>
+              </>
+            )}
           </View>
         </View>
       </ScrollView>
