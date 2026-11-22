@@ -307,6 +307,9 @@ export function AttendanceProvider({
   // Auto-close interval effect for sessions that are open and past their end time
   useEffect(() => {
     if (!authUser) return;
+
+    // Only asisten can auto-close sessions
+    if (authUser.role !== 'asisten') return;
     
     // Only run if we have sessions and are not in the middle of a merge operation
     if (mergingClasses || sessionsLoading) return;
