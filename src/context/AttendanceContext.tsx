@@ -39,7 +39,7 @@ import {
   SessionStatus,
 } from '../types/attendance';
 import { groupClassesByName, normalizeClassName } from '../utils/classNames';
-import { getScheduleStatus } from '../utils/sessionSchedule';
+import { getScheduleStatus, hasSessionExpired } from '../utils/sessionSchedule';
 import { useAuth } from './AuthContext';
 
 const AttendanceContext = createContext<AttendanceContextValue | undefined>(
@@ -296,13 +296,42 @@ export function AttendanceProvider({
   }, [allSessions, authUser]);
 
   const closeSession = useCallback(async (sessionId: string) => {
-    setAllSessions((prev) =>
-      prev.map((s) => (s.id === sessionId ? { ...s, status: 'closed' } : s))
-    );
-    if (isFirebaseConfigured && authUser) {
-      await updateSessionDoc(sessionId, { status: 'closed' });
-    }
-  }, [authUser]);
+     setAllSessions((prev) =>
+       prev.map((s) => (s.id === sessionId ? { ...s, status: 'closed' } : s))
+     );
+     if (isFirebaseConfigured && authUser) {
+       await updateSessionDoc(sessionId, { status: 'closed' });
+     }
+   }, [authUser]);
+
+  // Auto-close interval effect for sessions that are open and past their end time
+  useEffect(() => {
+    if (!authUser) return;
+    
+    // Only run if we have sessions and are not in the middle of a merge operation
+    if (mergingClasses || sessionsLoading) return;
+    
+    // Check every 60 seconds
+    const intervalId = setInterval(() => {
+      const now = new Date();
+      
+      // Find all sessions that are open and expired
+      const expiredSessions = allSessions.filter(session => 
+        session.status === 'open' && hasSessionExpired(session, now)
+      );
+      
+      // Close each expired session
+      expiredSessions.forEach(({ id: sessionId }) => {
+        // Close the session
+        void closeSession(sessionId).catch(err => {
+          console.error('Auto-close failed:', err);
+        });
+      });
+    }, 60000); // Check every 60 seconds
+    
+    // Cleanup interval on unmount or when dependencies change
+    return () => clearInterval(intervalId);
+  }, [allSessions, authUser, closeSession, mergingClasses, sessionsLoading]);
 
   const recordAttendance = useCallback(
     (sessionId: string, studentId: string): HybridRecordAttendanceReturn => {

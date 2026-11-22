@@ -51,3 +51,11 @@ export function getScheduleMessage(
 
   return null;
 }
+
+export function hasSessionExpired(
+  session: PracticumSession,
+  now = new Date()
+): boolean {
+  const { end } = getSessionScheduleBounds(session);
+  return now > end && session.status === 'open';
+}
