@@ -80,7 +80,9 @@ export default function LoginScreen() {
             <Text style={styles.cardTitle}>Masuk ke Akun</Text>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>
+                Email<Text style={styles.requiredMark}> *</Text>
+              </Text>
               <TextInput
                 value={email}
                 onChangeText={(val) => {
@@ -97,7 +99,9 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>
+                Password<Text style={styles.requiredMark}> *</Text>
+              </Text>
               <TextInput
                 value={password}
                 onChangeText={(val) => {
@@ -219,6 +223,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#334155',
     marginBottom: 6,
+  },
+  requiredMark: {
+    color: '#DC2626',
   },
   input: {
     borderWidth: 1,

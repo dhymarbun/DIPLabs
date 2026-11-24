@@ -14,6 +14,10 @@ import {
   updatePermissionReviewDoc,
 } from '../services/firestore';
 import {
+  sendPushNotificationToUsers,
+  createNotificationPayload,
+} from '../services/notifications';
+import {
   AIClassification,
   PermissionContextValue,
   PermissionRequest,
@@ -146,7 +150,15 @@ export function PermissionProvider({
       try {
         if (isFirebaseConfigured) {
           const session = await getDoc(doc(db, 'sessions', sessionId));
-          const assistantId = session.data()?.assistantId;
+          if (!session.exists()) {
+            return { ok: false, error: 'Sesi tidak ditemukan.' };
+          }
+          const sessionData = session.data();
+          const sessionStatus = sessionData?.status;
+          if (sessionStatus !== 'open') {
+            return { ok: false, error: 'Pengajuan izin hanya dapat dilakukan saat sesi dibuka.' };
+          }
+          const assistantId = sessionData?.assistantId;
           if (typeof assistantId !== 'string' || !assistantId) {
             return { ok: false, error: 'Sesi belum memiliki asisten penanggung jawab.' };
           }
@@ -184,6 +196,18 @@ export function PermissionProvider({
       const reviewer = authUser?.name ?? authUser?.uid ?? 'Asisten';
       if (isFirebaseConfigured && authUser) {
         await updatePermissionReviewDoc(requestId, decision, reviewer, note);
+        const request = permissions.find((p) => p.id === requestId);
+        if (request) {
+          sendPushNotificationToUsers(
+            [request.studentId],
+            createNotificationPayload('permission_reviewed', {
+              permissionId: requestId,
+              sessionId: request.sessionId,
+              decision,
+              studentId: request.studentId,
+            })
+          );
+        }
       } else {
         setPermissions((prev) =>
           prev.map((p) =>
@@ -200,7 +224,7 @@ export function PermissionProvider({
         );
       }
     },
-    [authUser]
+    [authUser, permissions]
   );
 
   const value = useMemo<PermissionContextValue>(

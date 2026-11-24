@@ -37,7 +37,10 @@ export default function AsistenPermissionReviewScreen() {
   const [filter, setFilter] = useState<FilterStatus>('all');
   const [notesById, setNotesById] = useState<Record<string, string>>({});
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{
+    message: string;
+    isError: boolean;
+  } | null>(null);
 
   const filteredRequests = useMemo(() => {
     if (filter === 'all') return allPermissions;
@@ -52,17 +55,21 @@ export default function AsistenPermissionReviewScreen() {
     setFeedback(null);
     try {
       await reviewPermission(requestId, decision, notesById[requestId]);
-      setFeedback(
-        decision === 'approved'
-          ? 'Pengajuan izin disetujui.'
-          : 'Pengajuan izin ditolak.'
-      );
+      setFeedback({
+        message:
+          decision === 'approved'
+            ? 'Pengajuan izin disetujui.'
+            : 'Pengajuan izin ditolak.',
+        isError: false,
+      });
     } catch (err) {
-      setFeedback(
-        err instanceof Error
-          ? err.message
-          : 'Gagal menyimpan keputusan izin ke Firestore.'
-      );
+      setFeedback({
+        message:
+          err instanceof Error
+            ? err.message
+            : 'Gagal menyimpan keputusan izin ke Firestore.',
+        isError: true,
+      });
     } finally {
       setProcessingId(null);
     }
@@ -133,8 +140,20 @@ export default function AsistenPermissionReviewScreen() {
           ) : null}
 
           {feedback ? (
-            <View style={styles.feedbackBox}>
-              <Text style={styles.feedbackText}>{feedback}</Text>
+            <View
+              style={[
+                styles.feedbackBox,
+                feedback.isError && styles.errorBox,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.feedbackText,
+                  feedback.isError && styles.errorText,
+                ]}
+              >
+                {feedback.message}
+              </Text>
             </View>
           ) : null}
 

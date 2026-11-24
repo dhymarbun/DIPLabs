@@ -63,8 +63,13 @@ service cloud.firestore {
     match /sessions/{sessionId} {
       allow read: if isSignedIn() && (isAsisten() ||
         (resource.data.participantIds is list && request.auth.uid in resource.data.participantIds));
-      allow create, update, delete: if isAsisten()
+      allow create: if isAsisten()
         && request.resource.data.assistantId == request.auth.uid;
+      allow update: if isAsisten()
+        && resource.data.assistantId == request.auth.uid
+        && request.resource.data.assistantId == resource.data.assistantId;
+      allow delete: if isAsisten()
+        && resource.data.assistantId == request.auth.uid;
     }
 
     // attendance/{attendanceDocId} ({sessionId}_{studentId})
@@ -102,6 +107,19 @@ service cloud.firestore {
         && request.resource.data.sessionId == resource.data.sessionId
         && request.resource.data.reason == resource.data.reason;
       allow delete: if isAsisten();
+    }
+
+    // laboratories/{labId}
+    match /laboratories/{labId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAsisten();
+    }
+
+    // notifications/{notificationId}
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.recipientIds;
+      allow create: if isAsisten();
+      allow update, delete: if false;
     }
   }
 }

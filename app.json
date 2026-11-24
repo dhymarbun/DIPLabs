@@ -14,7 +14,8 @@
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"
       },
-      "package": "com.itsmeverity.diplabs"
+      "package": "com.itsmeverity.diplabs",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -22,7 +23,16 @@
     },
     "plugins": [
       "expo-router",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-notifications",
+        {
+          "color": "#2563EB",
+          "androidMode": "default",
+          "androidCollapsedTitle": "DIPLabs Notifications",
+          "iosDisplayInForeground": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false
