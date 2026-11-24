@@ -34,7 +34,6 @@ Notifications.setNotificationHandler({
 });
 
 export async function requestNotificationPermissionsAsync(): Promise<Notifications.NotificationPermissionsStatus> {
-  console.log('[DIPLabs notifications] device:', Device.isDevice);
   if (!Device.isDevice) {
     const current = await Notifications.getPermissionsAsync();
     return { ...current, status: Notifications.PermissionStatus.DENIED, granted: false };
@@ -49,22 +48,17 @@ export async function requestNotificationPermissionsAsync(): Promise<Notificatio
 export async function getExpoPushTokenAsync(): Promise<string | null> {
   if (!Device.isDevice) return null;
   const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-  console.log('[DIPLabs notifications] EAS projectId:', projectId ?? '(missing)');
-  if (!projectId) throw new Error('EAS projectId tidak tersedia di konfigurasi Expo.');
+  if (!projectId) return null;
   const result = await Notifications.getExpoPushTokenAsync({ projectId });
-  console.log('[DIPLabs notifications] Expo push token received:', Boolean(result.data));
   return result.data;
 }
 
 export async function saveTokenToUser(uid: string, tokenData: FCMTokenData): Promise<void> {
-  if (!isFirebaseConfigured) throw new Error('Firebase belum dikonfigurasi.');
-  const token = tokenData.expoPushToken ?? tokenData.fcmToken;
-  if (!token) throw new Error('Token push kosong.');
+  if (!isFirebaseConfigured) return;
   await updateDoc(doc(db, 'users', uid), {
-    fcmTokens: arrayUnion(token),
+    fcmTokens: arrayUnion(tokenData.expoPushToken ?? tokenData.fcmToken),
     updatedAt: serverTimestamp(),
   });
-  console.log('[DIPLabs notifications] token saved for user:', uid);
 }
 
 export function createNotificationPayload(

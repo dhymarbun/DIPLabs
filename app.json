@@ -14,8 +14,7 @@
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"
       },
-      "package": "com.itsmeverity.diplabs",
-      "googleServicesFile": "./google-services.json"
+      "package": "com.itsmeverity.diplabs"
     },
     "web": {
       "bundler": "metro",

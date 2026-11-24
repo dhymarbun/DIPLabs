@@ -4,7 +4,6 @@ import React, {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react';
 import * as Notifications from 'expo-notifications';
@@ -33,14 +32,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<NotificationLog[]>([]);
   const [isRegistering, setIsRegistering] = useState<boolean>(false);
-  const registeredUidRef = useRef<string | null>(null);
-  const registeringUidRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const uid = authUser?.uid;
-    if (!uid) {
-      registeredUidRef.current = null;
-      registeringUidRef.current = null;
+    if (!authUser) {
       setNotificationPermission('undetermined');
       setExpoPushToken(null);
       setFcmToken(null);
@@ -48,49 +42,22 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       return;
     }
 
-    if (registeredUidRef.current === uid || registeringUidRef.current === uid) {
-      return;
-    }
-
-    let cancelled = false;
-    registeringUidRef.current = uid;
-
     const initializeNotifications = async () => {
-      try {
-        if (!Device.isDevice) {
-          if (!cancelled) setNotificationPermission('denied');
-          return;
-        }
+      if (!Device.isDevice) {
+        setNotificationPermission('denied');
+        return;
+      }
 
-        const { status } = await Notifications.getPermissionsAsync();
-        if (!cancelled) setNotificationPermission(status);
-        console.log('[DIPLabs notifications] permission:', status);
+      const { status } = await Notifications.getPermissionsAsync();
+      setNotificationPermission(status);
 
-        if (status !== 'granted') return;
-
-        const result = await registerForPushNotificationsAsync(uid);
-        if (cancelled) return;
-
-        setExpoPushToken(result.expoPushToken);
-        setNotificationPermission(result.permissionStatus.status);
-        if (result.expoPushToken) {
-          registeredUidRef.current = uid;
-        }
-        console.log('[DIPLabs notifications] registration complete:', Boolean(result.expoPushToken));
-      } catch (error) {
-        console.error('[DIPLabs notifications] registration failed:', error);
-      } finally {
-        if (registeringUidRef.current === uid) {
-          registeringUidRef.current = null;
-        }
+      if (status === 'granted') {
+        await registerForPushNotificationsAsync(authUser.uid);
       }
     };
 
-    void initializeNotifications();
-    return () => {
-      cancelled = true;
-    };
-  }, [authUser?.uid]);
+    initializeNotifications();
+  }, [authUser]);
 
   useEffect(() => {
     if (!authUser || notificationPermission !== 'granted') return;

@@ -335,19 +335,14 @@ export function AttendanceProvider({
 
     const participantIds = targetSession.participantIds ?? [];
     if (participantIds.length > 0) {
-      try {
-        const logs = await sendPushNotificationToUsers(
-          participantIds,
-          createNotificationPayload('session_opened', {
-            sessionId,
-            sessionName: targetSession.practicalName,
-            className: targetSession.className,
-          })
-        );
-        console.log('[DIPLabs notifications] session_opened sent:', logs.length);
-      } catch (error) {
-        console.error('[DIPLabs notifications] session_opened failed:', error);
-      }
+      sendPushNotificationToUsers(
+        participantIds,
+        createNotificationPayload('session_opened', {
+          sessionId,
+          sessionName: targetSession.practicalName,
+          className: targetSession.className,
+        })
+      );
     }
   }, [allSessions, authUser]);
 
@@ -537,25 +532,24 @@ export function AttendanceProvider({
 
   const deleteSession = useCallback(
     async (sessionId: string) => {
-      const session = allSessions.find((item) => item.id === sessionId);
-      if (!session) {
-        throw new Error('Sesi tidak ditemukan.');
-      }
-      if (attendanceRecords.some((record) => record.sessionId === sessionId)) {
-        throw new Error('Sesi tidak dapat dihapus karena sudah memiliki catatan presensi. Tutup sesi untuk mempertahankan riwayatnya.');
-      }
+      setAllSessions((prev) => prev.filter((s) => s.id !== sessionId));
       if (isFirebaseConfigured && authUser) {
         await deleteSessionDoc(sessionId);
       }
-      setAllSessions((prev) => prev.filter((item) => item.id !== sessionId));
     },
-    [allSessions, attendanceRecords, authUser]
+    [authUser]
   );
 
   const addLaboratory = useCallback(
     async (data: Omit<Laboratory, 'id' | 'updatedAt'>) => {
       if (isFirebaseConfigured && authUser) {
-        await createLaboratoryDoc(data);
+        const labId = await createLaboratoryDoc(data);
+        const newLab: Laboratory = {
+          ...data,
+          id: labId,
+          updatedAt: new Date().toISOString(),
+        };
+        setLaboratories((prev) => [...prev, newLab]);
       } else {
         const newLab: Laboratory = {
           ...data,
