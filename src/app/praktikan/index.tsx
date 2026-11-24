@@ -140,8 +140,8 @@ export default function PraktikanScheduleScreen() {
             <Text style={styles.historyLink}>Lihat →</Text>
           </Pressable>
 
-          <Pressable
-            onPress={() => router.push('/praktikan/izin')}
+           <Pressable
+             onPress={() => router.push('/praktikan/izin')}
             style={({ pressed }) => [styles.permissionBtn, pressed && styles.pressed]}
           >
             <View>
@@ -149,6 +149,17 @@ export default function PraktikanScheduleScreen() {
               <Text style={styles.permissionSub}>Ajukan alasan ketidakhadiran dan pantau statusnya</Text>
             </View>
             <Text style={styles.historyLink}>Lihat →</Text>
+           </Pressable>
+
+          <Pressable
+            onPress={() => router.push('/maps')}
+            style={({ pressed }) => [styles.permissionBtn, pressed && styles.pressed]}
+          >
+            <View>
+              <Text style={styles.permissionLabel}>Peta Laboratorium</Text>
+              <Text style={styles.permissionSub}>Lihat lokasi dan aktivitas praktikum</Text>
+            </View>
+            <Text style={styles.historyLink}>Buka →</Text>
           </Pressable>
 
           {/* Filter Chips */}

@@ -13,17 +13,7 @@ import { StatusBadge } from '../../components/asisten/StatusBadge';
 import { formatIndonesianDate } from '../../components/asisten/SessionCard';
 import { useAttendance } from '../../context/AttendanceContext';
 import { formatCheckInTime } from './riwayat';
-import { RecordAttendanceFailureReason } from '../../types/attendance';
 import { usePermissions } from '../../context/PermissionContext';
-
-const FAILURE_MESSAGES: Record<RecordAttendanceFailureReason, string> = {
-  'session-not-open':
-    'Sesi belum dibuka atau sudah ditutup. Tunggu asisten membuka sesi.',
-  'already-recorded':
-    'Anda sudah melakukan presensi pada sesi ini. Presensi tidak bisa diulang.',
-  'user-not-found':
-    'Identitas praktikan tidak ditemukan. Silakan keluar dan masuk kembali.',
-};
 
 export default function PraktikanSessionDetailScreen() {
   const router = useRouter();
@@ -32,7 +22,6 @@ export default function PraktikanSessionDetailScreen() {
   const {
     currentUser,
     sessions,
-    recordAttendance,
     getAttendanceForStudent,
   } = useAttendance();
   const { submitPermission, myPermissions } = usePermissions();
@@ -77,18 +66,7 @@ export default function PraktikanSessionDetailScreen() {
   );
 
   const handlePresensi = () => {
-    if (!session || !currentUser) return;
-    const result = recordAttendance(session.id, currentUser.id);
-    if (result.ok) {
-      setFeedback({
-        tone: 'success',
-        text: `Presensi berhasil dicatat pada ${formatCheckInTime(
-          result.record.checkedInAt
-        )}.`,
-      });
-    } else {
-      setFeedback({ tone: 'error', text: FAILURE_MESSAGES[result.reason] });
-    }
+    if (session) router.push(`/praktikan/presensi/${session.id}`);
   };
 
   const handleSubmitPermission = async () => {
