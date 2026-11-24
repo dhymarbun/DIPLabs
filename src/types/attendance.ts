@@ -1,3 +1,5 @@
+import { Laboratory } from './notification';
+
 export type UserRole = 'asisten' | 'praktikan';
 
 export type AuthUser = {
@@ -43,10 +45,11 @@ export type Participant = {
 export type PracticumSession = {
   id: string;
   classId?: string;
+  labId?: string;
   practicalName: string;
   className: string;
-  date: string;       // ISO date atau format tanggal yang disepakati
-  startTime: string;  // format jam yang konsisten, mis. "09:00"
+  date: string;
+  startTime: string;
   endTime: string;
   room?: string;
   assistantId?: string;
@@ -143,6 +146,14 @@ export type AttendanceContextValue = {
   deleteSession: (sessionId: string) => Promise<void>;
   addParticipant: (participant: Participant) => Promise<void>;
   removeParticipant: (participantId: string) => Promise<void>;
+  addLaboratory: (data: Omit<Laboratory, 'id' | 'updatedAt'>) => Promise<void>;
+  updateLaboratory: (
+    laboratoryId: string,
+    data: Partial<Omit<Laboratory, 'id'>>
+  ) => Promise<void>;
+  deleteLaboratory: (laboratoryId: string) => Promise<void>;
+  laboratories: Laboratory[];
+  laboratoriesLoading: boolean;
 
   // Extended helpers & backward-compatibility for Pertemuan 1 screens
   currentUser: AppUser | null;

@@ -4,9 +4,12 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   setDoc,
   updateDoc,
   runTransaction,
+  query,
+  where,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import {
@@ -17,6 +20,10 @@ import {
   PracticumClass,
   PracticumSession,
 } from '../types/attendance';
+import {
+  Laboratory,
+  NotificationPayload,
+} from '../types/notification';
 
 function stripUndefined<T extends object>(obj: T): T {
   const result: Record<string, unknown> = {};
@@ -159,4 +166,94 @@ export async function updatePermissionReviewDoc(
       reviewerNote: note?.trim() ? note.trim() : undefined,
     })
   );
+}
+
+const LABORATORIES_COLLECTION = 'laboratories';
+
+export async function createLaboratoryDoc(
+  data: Omit<Laboratory, 'id' | 'updatedAt'>
+): Promise<string> {
+  const ref = await addDoc(
+    collection(db, LABORATORIES_COLLECTION),
+    stripUndefined({
+      ...data,
+      updatedAt: new Date().toISOString(),
+    })
+  );
+  return ref.id;
+}
+
+export async function updateLaboratoryDoc(
+  laboratoryId: string,
+  data: Partial<Omit<Laboratory, 'id'>>
+): Promise<void> {
+  const ref = doc(db, LABORATORIES_COLLECTION, laboratoryId);
+  await updateDoc(
+    ref,
+    stripUndefined({
+      ...data,
+      updatedAt: new Date().toISOString(),
+    })
+  );
+}
+
+export async function deleteLaboratoryDoc(laboratoryId: string): Promise<void> {
+  const ref = doc(db, LABORATORIES_COLLECTION, laboratoryId);
+  await deleteDoc(ref);
+}
+
+export async function fetchLaboratories(): Promise<Laboratory[]> {
+  const snapshot = await getDocs(collection(db, LABORATORIES_COLLECTION));
+  return snapshot.docs.map((docSnap) => {
+    const d = docSnap.data();
+    return {
+      id: docSnap.id,
+      name: String(d.name ?? ''),
+      room: String(d.room ?? ''),
+      description: d.description ? String(d.description) : undefined,
+      latitude: typeof d.latitude === 'number' ? d.latitude : Number(d.latitude ?? 0),
+      longitude: typeof d.longitude === 'number' ? d.longitude : Number(d.longitude ?? 0),
+      radiusMeters:
+        typeof d.radiusMeters === 'number' ? d.radiusMeters : Number(d.radiusMeters ?? 0),
+      updatedAt: String(d.updatedAt ?? ''),
+    };
+  });
+}
+
+export async function fetchLaboratoryById(
+  laboratoryId: string
+): Promise<Laboratory | null> {
+  const ref = doc(db, LABORATORIES_COLLECTION, laboratoryId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  const d = snap.data();
+  return {
+    id: snap.id,
+    name: String(d.name ?? ''),
+    room: String(d.room ?? ''),
+    description: d.description ? String(d.description) : undefined,
+    latitude: typeof d.latitude === 'number' ? d.latitude : Number(d.latitude ?? 0),
+    longitude: typeof d.longitude === 'number' ? d.longitude : Number(d.longitude ?? 0),
+    radiusMeters:
+      typeof d.radiusMeters === 'number' ? d.radiusMeters : Number(d.radiusMeters ?? 0),
+    updatedAt: String(d.updatedAt ?? ''),
+  };
+}
+
+export async function createNotificationLogDoc(data: {
+  recipientIds: string[];
+  title: string;
+  body: string;
+  payload: NotificationPayload;
+  sentVia: 'expo' | 'fcm' | 'local';
+  status: 'sent' | 'failed' | 'delivered';
+}): Promise<string> {
+  const ref = await addDoc(
+    collection(db, 'notifications'),
+    stripUndefined({
+      ...data,
+      createdAt: new Date().toISOString(),
+    })
+  );
+  return ref.id;
 }

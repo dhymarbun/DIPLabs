@@ -103,5 +103,18 @@ service cloud.firestore {
         && request.resource.data.reason == resource.data.reason;
       allow delete: if isAsisten();
     }
+
+    // laboratories/{labId}
+    match /laboratories/{labId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAsisten();
+    }
+
+    // notifications/{notificationId}
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.recipientIds;
+      allow create: if isAsisten();
+      allow update, delete: if false;
+    }
   }
 }

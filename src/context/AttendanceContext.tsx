@@ -7,7 +7,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { collection, getDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, getDoc, doc, onSnapshot, query, where, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import {
   MOCK_ASSISTANTS,
   MOCK_ATTENDANCE_RECORDS,
@@ -25,6 +25,9 @@ import {
   updateClassDoc,
   updateSessionDoc,
   upsertParticipantDoc,
+  createLaboratoryDoc,
+  updateLaboratoryDoc,
+  deleteLaboratoryDoc,
 } from '../services/firestore';
 import {
   AppUser,
@@ -38,6 +41,11 @@ import {
   RecordAttendanceResult,
   SessionStatus,
 } from '../types/attendance';
+import { Laboratory } from '../types/notification';
+import {
+  sendPushNotificationToUsers,
+  createNotificationPayload,
+} from '../services/notifications';
 import { groupClassesByName, normalizeClassName } from '../utils/classNames';
 import { getScheduleStatus, hasSessionExpired } from '../utils/sessionSchedule';
 import { useAuth } from './AuthContext';
@@ -68,6 +76,10 @@ export function AttendanceProvider({
     { id: 'cls-k02', name: 'K-02' },
   ]);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [laboratories, setLaboratories] = useState<Laboratory[]>([]);
+  const [laboratoriesLoading, setLaboratoriesLoading] = useState<boolean>(
+    isFirebaseConfigured
+  );
   const [allSessions, setAllSessions] =
     useState<PracticumSession[]>(MOCK_SESSIONS);
   const [sessionsLoading, setSessionsLoading] = useState<boolean>(
@@ -138,6 +150,7 @@ export function AttendanceProvider({
           return {
             id: docSnap.id,
             classId: d.classId ? String(d.classId) : undefined,
+            labId: d.labId ? String(d.labId) : undefined,
             practicalName: String(d.practicalName ?? ''),
             className: String(d.className ?? ''),
             date: String(d.date ?? ''),
@@ -215,6 +228,31 @@ export function AttendanceProvider({
         }, () => undefined)
       : () => undefined;
 
+    const unsubLaboratories = authUser.role === 'asisten'
+      ? onSnapshot(collection(db, 'laboratories'), (snapshot) => {
+          setLaboratories(snapshot.docs.map((docSnap) => {
+            const d = docSnap.data();
+            return {
+              id: docSnap.id,
+              name: String(d.name ?? ''),
+              room: String(d.room ?? ''),
+              description: d.description ? String(d.description) : undefined,
+              latitude: typeof d.latitude === 'number' ? d.latitude : Number(d.latitude ?? 0),
+              longitude: typeof d.longitude === 'number' ? d.longitude : Number(d.longitude ?? 0),
+              radiusMeters:
+                typeof d.radiusMeters === 'number' ? d.radiusMeters : Number(d.radiusMeters ?? 0),
+              updatedAt: String(d.updatedAt ?? ''),
+            };
+          }));
+          setLaboratoriesLoading(false);
+        }, (err) => {
+          setAttendanceError(
+            err.message || 'Gagal memuat data laboratorium dari Firestore.'
+          );
+          setLaboratoriesLoading(false);
+        })
+      : () => undefined;
+
     const unsubUsers = authUser.role === 'asisten'
       ? onSnapshot(query(collection(db, 'users'), where('role', '==', 'praktikan')), (snapshot) => {
           setStudents(snapshot.docs.map((docSnap) => {
@@ -230,6 +268,7 @@ export function AttendanceProvider({
       unsubClasses();
       unsubParticipants();
       unsubUsers();
+      unsubLaboratories();
     };
   }, [authUser]);
 
@@ -292,6 +331,18 @@ export function AttendanceProvider({
     );
     if (isFirebaseConfigured && authUser) {
       await updateSessionDoc(sessionId, { status: 'open' });
+    }
+
+    const participantIds = targetSession.participantIds ?? [];
+    if (participantIds.length > 0) {
+      sendPushNotificationToUsers(
+        participantIds,
+        createNotificationPayload('session_opened', {
+          sessionId,
+          sessionName: targetSession.practicalName,
+          className: targetSession.className,
+        })
+      );
     }
   }, [allSessions, authUser]);
 
@@ -449,14 +500,34 @@ export function AttendanceProvider({
 
   const updateSession = useCallback(
     async (sessionId: string, data: Partial<PracticumSession>) => {
+      const scheduleFields = ['date', 'startTime', 'endTime', 'room', 'labId'];
+      const changedFields = Object.keys(data).filter((k) =>
+        scheduleFields.includes(k)
+      );
       setAllSessions((prev) =>
         prev.map((s) => (s.id === sessionId ? { ...s, ...data } : s))
       );
       if (isFirebaseConfigured && authUser) {
         await updateSessionDoc(sessionId, data);
       }
+
+      if (changedFields.length > 0) {
+        const session = allSessions.find((s) => s.id === sessionId);
+        const participantIds = session?.participantIds ?? [];
+        if (participantIds.length > 0) {
+          sendPushNotificationToUsers(
+            participantIds,
+            createNotificationPayload('schedule_updated', {
+              sessionId,
+              sessionName: session?.practicalName,
+              className: session?.className,
+              changes: changedFields,
+            })
+          );
+        }
+      }
     },
-    [authUser]
+    [allSessions, authUser]
   );
 
   const deleteSession = useCallback(
@@ -464,6 +535,50 @@ export function AttendanceProvider({
       setAllSessions((prev) => prev.filter((s) => s.id !== sessionId));
       if (isFirebaseConfigured && authUser) {
         await deleteSessionDoc(sessionId);
+      }
+    },
+    [authUser]
+  );
+
+  const addLaboratory = useCallback(
+    async (data: Omit<Laboratory, 'id' | 'updatedAt'>) => {
+      if (isFirebaseConfigured && authUser) {
+        const labId = await createLaboratoryDoc(data);
+        const newLab: Laboratory = {
+          ...data,
+          id: labId,
+          updatedAt: new Date().toISOString(),
+        };
+        setLaboratories((prev) => [...prev, newLab]);
+      } else {
+        const newLab: Laboratory = {
+          ...data,
+          id: `lab-${Date.now()}`,
+          updatedAt: new Date().toISOString(),
+        };
+        setLaboratories((prev) => [...prev, newLab]);
+      }
+    },
+    [authUser]
+  );
+
+  const updateLaboratory = useCallback(
+    async (laboratoryId: string, data: Partial<Omit<Laboratory, 'id'>>) => {
+      setLaboratories((prev) =>
+        prev.map((l) => (l.id === laboratoryId ? { ...l, ...data, updatedAt: new Date().toISOString() } : l))
+      );
+      if (isFirebaseConfigured && authUser) {
+        await updateLaboratoryDoc(laboratoryId, data);
+      }
+    },
+    [authUser]
+  );
+
+  const deleteLaboratory = useCallback(
+    async (laboratoryId: string) => {
+      setLaboratories((prev) => prev.filter((l) => l.id !== laboratoryId));
+      if (isFirebaseConfigured && authUser) {
+        await deleteLaboratoryDoc(laboratoryId);
       }
     },
     [authUser]
@@ -947,6 +1062,11 @@ export function AttendanceProvider({
       deleteSession,
       addParticipant,
       removeParticipant,
+      addLaboratory,
+      updateLaboratory,
+      deleteLaboratory,
+      laboratories,
+      laboratoriesLoading,
       currentUser,
       setCurrentUser: setManualUser,
       assistants,
@@ -976,6 +1096,11 @@ export function AttendanceProvider({
       deleteSession,
       addParticipant,
       removeParticipant,
+      addLaboratory,
+      updateLaboratory,
+      deleteLaboratory,
+      laboratories,
+      laboratoriesLoading,
       currentUser,
       assistants,
       students,

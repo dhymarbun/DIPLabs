@@ -14,6 +14,10 @@ import {
   updatePermissionReviewDoc,
 } from '../services/firestore';
 import {
+  sendPushNotificationToUsers,
+  createNotificationPayload,
+} from '../services/notifications';
+import {
   AIClassification,
   PermissionContextValue,
   PermissionRequest,
@@ -192,6 +196,18 @@ export function PermissionProvider({
       const reviewer = authUser?.name ?? authUser?.uid ?? 'Asisten';
       if (isFirebaseConfigured && authUser) {
         await updatePermissionReviewDoc(requestId, decision, reviewer, note);
+        const request = permissions.find((p) => p.id === requestId);
+        if (request) {
+          sendPushNotificationToUsers(
+            [request.studentId],
+            createNotificationPayload('permission_reviewed', {
+              permissionId: requestId,
+              sessionId: request.sessionId,
+              decision,
+              studentId: request.studentId,
+            })
+          );
+        }
       } else {
         setPermissions((prev) =>
           prev.map((p) =>
@@ -208,7 +224,7 @@ export function PermissionProvider({
         );
       }
     },
-    [authUser]
+    [authUser, permissions]
   );
 
   const value = useMemo<PermissionContextValue>(
