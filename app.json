@@ -23,6 +23,7 @@
     "plugins": [
       "expo-router",
       "expo-asset",
+      "expo-location",
       [
         "expo-notifications",
         {

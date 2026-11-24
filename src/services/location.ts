@@ -1,4 +1,6 @@
 import { collection, onSnapshot } from 'firebase/firestore';
+import * as ExpoLocation from 'expo-location';
+import { Platform } from 'react-native';
 import { db, isFirebaseConfigured } from '../firebase/config';
 import { Laboratory, GeoCoordinates, LocationCheckResult, LocationPermissionStatus } from '../types/location';
 
@@ -15,19 +17,22 @@ export function calculateDistanceMeters(a: GeoCoordinates, b: GeoCoordinates): n
   return 2 * radius * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
-function getGeolocation(): Geolocation | undefined {
-  return typeof navigator !== 'undefined' ? navigator.geolocation : undefined;
-}
-
 export function requestLocation(): Promise<GeoCoordinates> {
-  const geolocation = getGeolocation();
-  if (!geolocation) return Promise.reject(new Error('location-unavailable'));
-  return new Promise((resolve, reject) => {
-    geolocation.getCurrentPosition(
-      (position: GeolocationPosition) => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
-      (error: GeolocationError) => reject(new Error(error.code === 1 ? 'permission-denied' : 'location-unavailable')),
+  if (Platform.OS === 'web') {
+    const geolocation = typeof navigator !== 'undefined' ? navigator.geolocation : undefined;
+    if (!geolocation) return Promise.reject(new Error('location-unavailable'));
+    return new Promise((resolve, reject) => geolocation.getCurrentPosition(
+      (position) => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
+      (error) => reject(new Error(error.code === 1 ? 'permission-denied' : 'location-unavailable')),
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
-    );
+    ));
+  }
+  return ExpoLocation.requestForegroundPermissionsAsync().then(async ({ status }) => {
+    if (status !== ExpoLocation.PermissionStatus.GRANTED) throw new Error('permission-denied');
+    const enabled = await ExpoLocation.hasServicesEnabledAsync();
+    if (!enabled) throw new Error('location-disabled');
+    const position = await ExpoLocation.getCurrentPositionAsync({ accuracy: ExpoLocation.Accuracy.High });
+    return { latitude: position.coords.latitude, longitude: position.coords.longitude };
   });
 }
 
@@ -35,17 +40,34 @@ export function watchDeviceLocation(
   onLocation: (location: GeoCoordinates) => void,
   onError?: (error: LocationPermissionStatus) => void,
 ): () => void {
-  const geolocation = getGeolocation();
-  if (!geolocation) {
-    onError?.('unavailable');
-    return () => undefined;
+  if (Platform.OS === 'web') {
+    const geolocation = typeof navigator !== 'undefined' ? navigator.geolocation : undefined;
+    if (!geolocation) { onError?.('unavailable'); return () => undefined; }
+    const watchId = geolocation.watchPosition(
+      (position) => onLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
+      (error) => onError?.(error.code === 1 ? 'denied' : 'unavailable'),
+      { enableHighAccuracy: true, maximumAge: 5000 },
+    );
+    return () => geolocation.clearWatch(watchId);
   }
-  const watchId = geolocation.watchPosition(
-    (position: GeolocationPosition) => onLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
-    (error: GeolocationError) => onError?.(error.code === 1 ? 'denied' : 'unavailable'),
-    { enableHighAccuracy: true, maximumAge: 5000 },
-  );
-  return () => geolocation.clearWatch(watchId);
+  let cancelled = false;
+  let subscription: ExpoLocation.LocationSubscription | undefined;
+  void (async () => {
+    try {
+      const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
+      if (status !== ExpoLocation.PermissionStatus.GRANTED) return onError?.('denied');
+      if (!(await ExpoLocation.hasServicesEnabledAsync())) return onError?.('unavailable');
+      subscription = await ExpoLocation.watchPositionAsync(
+        { accuracy: ExpoLocation.Accuracy.High, distanceInterval: 5 },
+        (position) => {
+          if (!cancelled) onLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+        },
+      );
+    } catch {
+      if (!cancelled) onError?.('unavailable');
+    }
+  })();
+  return () => { cancelled = true; subscription?.remove(); };
 }
 
 export function subscribeLaboratories(
@@ -85,7 +107,8 @@ export async function validateLocation(laboratory: Laboratory | undefined): Prom
     }
     return { ok: true, userCoords, distanceMeters, radiusMeters: laboratory.radiusMeters };
   } catch (error) {
-    const reason = error instanceof Error && error.message === 'permission-denied' ? 'permission-denied' : 'location-unavailable';
-    return { ok: false, reason, message: reason === 'permission-denied' ? 'Izin lokasi ditolak. Aktifkan izin lokasi untuk presensi.' : 'Lokasi perangkat belum tersedia.' };
+    const code = error instanceof Error ? error.message : 'location-unavailable';
+    const reason = code === 'permission-denied' ? 'permission-denied' : code === 'location-disabled' ? 'location-disabled' : 'location-unavailable';
+    return { ok: false, reason, message: reason === 'permission-denied' ? 'Izin lokasi ditolak. Aktifkan izin lokasi untuk presensi.' : reason === 'location-disabled' ? 'Layanan lokasi perangkat sedang mati.' : 'Lokasi perangkat belum tersedia.' };
   }
 }
