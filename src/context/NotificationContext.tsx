@@ -51,12 +51,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       const { status } = await Notifications.getPermissionsAsync();
       setNotificationPermission(status);
 
-      if (status === 'granted') {
-        await registerForPushNotificationsAsync(authUser.uid);
-      }
-    };
+       console.log('[DIPLabs notifications] permission:', status);
+       if (status === 'granted') {
+         try {
+           const result = await registerForPushNotificationsAsync(authUser.uid);
+           setExpoPushToken(result.expoPushToken);
+           console.log('[DIPLabs notifications] registration complete:', Boolean(result.expoPushToken));
+         } catch (error) {
+           console.error('[DIPLabs notifications] registration failed:', error);
+         }
+       }
+     };
 
-    initializeNotifications();
+     void initializeNotifications();
   }, [authUser]);
 
   useEffect(() => {

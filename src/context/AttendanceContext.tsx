@@ -335,14 +335,19 @@ export function AttendanceProvider({
 
     const participantIds = targetSession.participantIds ?? [];
     if (participantIds.length > 0) {
-      sendPushNotificationToUsers(
-        participantIds,
-        createNotificationPayload('session_opened', {
-          sessionId,
-          sessionName: targetSession.practicalName,
-          className: targetSession.className,
-        })
-      );
+      try {
+        const logs = await sendPushNotificationToUsers(
+          participantIds,
+          createNotificationPayload('session_opened', {
+            sessionId,
+            sessionName: targetSession.practicalName,
+            className: targetSession.className,
+          })
+        );
+        console.log('[DIPLabs notifications] session_opened sent:', logs.length);
+      } catch (error) {
+        console.error('[DIPLabs notifications] session_opened failed:', error);
+      }
     }
   }, [allSessions, authUser]);
 
