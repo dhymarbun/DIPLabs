@@ -120,7 +120,19 @@ export function AttendanceProvider({
     lastMergeSignatureRef.current = null;
     setClassMergeError(null);
     if (!isFirebaseConfigured || !authUser) {
+      if (isFirebaseConfigured) {
+        // Listener callbacks can arrive just after sign-out. Clear account data
+        // before another user can enter the app.
+        setAllSessions([]);
+        setAttendanceRecords([]);
+        setClasses([]);
+        setParticipants([]);
+        setLaboratories([]);
+        setStudents([]);
+      }
       setSessionsLoading(false);
+      setLaboratoriesLoading(false);
+      setAttendanceError(null);
       setClassesReady(true);
       setParticipantsReady(true);
       classesReadyUidRef.current = authUser?.uid ?? null;
@@ -129,7 +141,15 @@ export function AttendanceProvider({
     }
 
     setSessionsLoading(true);
+    setLaboratoriesLoading(authUser.role === 'asisten');
     setAttendanceError(null);
+    // Do not display the previous user's data while the new listeners connect.
+    setAllSessions([]);
+    setAttendanceRecords([]);
+    setClasses([]);
+    setParticipants([]);
+    setLaboratories([]);
+    setStudents([]);
     setClassesReady(false);
     setParticipantsReady(false);
     classesReadyUidRef.current = null;

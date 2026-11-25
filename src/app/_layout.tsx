@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, usePathname, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '../context/AuthContext';
 import { AttendanceProvider } from '../context/AttendanceContext';
@@ -10,21 +10,32 @@ import { useAuth } from '../context/AuthContext';
 function RouteGuard() {
   const router = useRouter();
   const segments = useSegments();
+  const pathname = usePathname();
   const { authUser, authLoading } = useAuth();
   const area = segments[0];
 
   useEffect(() => {
     if (authLoading) return;
-    if (!authUser && (area === 'asisten' || area === 'praktikan')) {
-      router.replace('/auth/login');
+    const isProtectedArea =
+      area === 'asisten' || area === 'praktikan' || area === 'maps';
+    let destination: '/auth/login' | '/asisten' | '/praktikan' | null = null;
+
+    if (!authUser && isProtectedArea) {
+      destination = '/auth/login';
     } else if (authUser && area === 'auth') {
-      router.replace(authUser.role === 'asisten' ? '/asisten' : '/praktikan');
+      destination = authUser.role === 'asisten' ? '/asisten' : '/praktikan';
     } else if (authUser?.role === 'praktikan' && area === 'asisten') {
-      router.replace('/praktikan');
+      destination = '/praktikan';
     } else if (authUser?.role === 'asisten' && area === 'praktikan') {
-      router.replace('/asisten');
+      destination = '/asisten';
     }
-  }, [area, authLoading, authUser, router]);
+
+    // Avoid replacing the active screen with itself: it creates duplicate
+    // route transitions and made the schedule flow appear to loop.
+    if (destination && pathname !== destination) {
+      router.replace(destination);
+    }
+  }, [area, authLoading, authUser, pathname, router]);
 
   return null;
 }
@@ -102,6 +113,12 @@ export default function RootLayout() {
                   title: 'Pengajuan Izin Praktikan',
                 }}
               />
+              <Stack.Screen name="praktikan/index" options={{ headerShown: false }} />
+              <Stack.Screen name="praktikan/jadwal" options={{ title: 'Jadwal Praktikum' }} />
+              <Stack.Screen name="praktikan/[sessionId]" options={{ title: 'Detail Sesi' }} />
+              <Stack.Screen name="praktikan/riwayat" options={{ title: 'Riwayat Presensi' }} />
+              <Stack.Screen name="praktikan/izin" options={{ title: 'Pengajuan Izin' }} />
+              <Stack.Screen name="maps/index" options={{ title: 'Peta Laboratorium' }} />
             </Stack>
           </NotificationProvider>
         </PermissionProvider>

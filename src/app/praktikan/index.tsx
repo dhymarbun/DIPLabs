@@ -50,6 +50,11 @@ export default function PraktikanScheduleScreen() {
           try {
             await logout();
             router.replace('/auth/login');
+          } catch (error) {
+            Alert.alert(
+              'Logout gagal',
+              error instanceof Error ? error.message : 'Coba lagi.'
+            );
           } finally {
             setLoggingOut(false);
           }
@@ -99,7 +104,9 @@ export default function PraktikanScheduleScreen() {
   }
 
   const todaySession = baseSessions.find((session) => session.date === new Date().toISOString().slice(0, 10));
-  const go = (path: '/praktikan' | '/praktikan/riwayat' | '/maps' | '/praktikan/izin') => router.push(path);
+  const go = (path: '/praktikan' | '/praktikan/jadwal' | '/praktikan/riwayat' | '/maps' | '/praktikan/izin') => {
+    if (path !== '/praktikan') router.push(path);
+  };
   const feature = (title: string, description: string, color: string, icon: keyof typeof Ionicons.glyphMap, path: Parameters<typeof go>[0]) => (
     <Pressable onPress={() => go(path)} style={({ pressed }) => [styles.featureCard, { backgroundColor: color }, pressed && styles.pressed]}>
       <Ionicons name={icon} size={28} color="#232420" />
@@ -112,13 +119,22 @@ export default function PraktikanScheduleScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.appShell}>
         <ScrollView contentContainerStyle={styles.dashboardContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.greeting}>Selamat Pagi,{`\n`}{currentUser.name.split(' ')[0]}!</Text>
+          <View style={styles.dashboardHeader}>
+            <Text style={styles.greeting}>Selamat Pagi,{`\n`}{currentUser.name.split(' ')[0]}!</Text>
+            <Pressable
+              onPress={handleLogout}
+              disabled={loggingOut}
+              style={({ pressed }) => [styles.logoutAction, (pressed || loggingOut) && styles.pressed]}
+            >
+              <Text style={styles.logoutActionText}>{loggingOut ? 'Keluar...' : 'Keluar'}</Text>
+            </Pressable>
+          </View>
           <Pressable style={({ pressed }) => [styles.todayBanner, pressed && styles.pressed]} onPress={() => todaySession && router.push(`/praktikan/${todaySession.id}`)}>
             <View style={styles.flexOne}><Text style={styles.todayTitle}>Praktikum Hari Ini</Text><Text style={styles.todaySummary}>{todaySession ? `${todaySession.practicalName} · ${todaySession.startTime} WIB` : 'Tidak ada jadwal hari ini'}</Text></View>
             <Ionicons name="calendar-outline" size={28} color="#232420" />
           </Pressable>
           <View style={styles.featureGrid}>
-            {feature('Jadwal Praktikum', 'Lihat seluruh jadwal dan sesi mendatang.', '#FFE4A1', 'calendar-outline', '/praktikan')}
+            {feature('Jadwal Praktikum', 'Lihat seluruh jadwal dan sesi mendatang.', '#FFE4A1', 'calendar-outline', '/praktikan/jadwal')}
             {feature('Peta Laboratorium', 'Temukan lokasi dan informasi laboratorium.', '#E3E7D8', 'map-outline', '/maps')}
             {feature('Pengajuan Izin', 'Ajukan izin ketidakhadiran praktikum.', '#F1D3CC', 'document-text-outline', '/praktikan/izin')}
             {feature('Riwayat Presensi', 'Pantau catatan kehadiran Anda.', '#E1D9FA', 'time-outline', '/praktikan/riwayat')}
@@ -140,6 +156,7 @@ const styles = StyleSheet.create({
   },
   appShell: { flex: 1, backgroundColor: '#F2F1ED', borderRadius: 32, overflow: 'hidden' },
   dashboardContent: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32, gap: 24 },
+  dashboardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
   flexOne: { flex: 1 },
   todayBanner: { minHeight: 112, padding: 16, borderRadius: 28, backgroundColor: '#FFC332', flexDirection: 'row', alignItems: 'center', gap: 12 },
   todayTitle: { color: '#232420', fontSize: 18, lineHeight: 26, fontWeight: '500' },
@@ -181,7 +198,10 @@ const styles = StyleSheet.create({
     lineHeight: 38,
     letterSpacing: -0.64,
     fontWeight: '500',
+    flex: 1,
   },
+  logoutAction: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D7D8D2', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
+  logoutActionText: { color: '#232420', fontSize: 12, fontWeight: '700' },
   profileSub: {
     fontSize: 12,
     color: '#64748B',
