@@ -40,6 +40,22 @@ User story digunakan sebagai acuan kebutuhan fitur dan pembagian tugas pengemban
 
 ## Setup Lokal (Untuk Anggota Tim)
 
+### Konfigurasi Firebase dan Google Maps
+
+Salin `.env.example` menjadi `.env`, lalu isi konfigurasi Firebase dari Firebase
+Console dan `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` dari Google Cloud Console.
+Google Maps membutuhkan API key Android untuk layar `/maps`; jangan commit file
+`.env` atau API key ke repository.
+
+Setelah mengubah konfigurasi native, buat ulang development build karena
+perubahan `com.google.android.geo.API_KEY` tidak masuk ke aplikasi yang sudah
+terpasang:
+
+```bash
+npx expo prebuild
+npx expo run:android
+```
+
 1. **Clone repository dan masuk ke direktori proyek**
 
    ```bash

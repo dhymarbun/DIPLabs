@@ -8,6 +8,7 @@ import {
   View,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRouter } from 'expo-router';
 import { PraktikanSessionCard } from '../../components/praktikan/PraktikanSessionCard';
 import { useAttendance } from '../../context/AttendanceContext';
@@ -27,7 +28,7 @@ export default function PraktikanScheduleScreen() {
   const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
-    navigation.setOptions({ title: 'Jadwal Praktikum' });
+    navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
   const myRecords = useMemo(() => {
@@ -97,149 +98,37 @@ export default function PraktikanScheduleScreen() {
     );
   }
 
+  const todaySession = baseSessions.find((session) => session.date === new Date().toISOString().slice(0, 10));
+  const go = (path: '/praktikan' | '/praktikan/riwayat' | '/maps' | '/praktikan/izin') => router.push(path);
+  const feature = (title: string, description: string, color: string, icon: keyof typeof Ionicons.glyphMap, path: Parameters<typeof go>[0]) => (
+    <Pressable onPress={() => go(path)} style={({ pressed }) => [styles.featureCard, { backgroundColor: color }, pressed && styles.pressed]}>
+      <Ionicons name={icon} size={28} color="#232420" />
+      <Text style={styles.featureTitle}>{title}</Text>
+      <Text style={styles.featureDescription}>{description}</Text>
+    </Pressable>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.container}>
-          <View style={styles.profileRow}>
-            <View>
-              <Text style={styles.greeting}>{currentUser.name}</Text>
-              <Text style={styles.profileSub}>
-                Praktikan • {currentUser.nim ?? '-'} (
-                {currentUser.className ?? '-'})
-              </Text>
-            </View>
-            <Pressable
-              onPress={handleLogout}
-              disabled={loggingOut}
-              style={({ pressed }) => [
-                styles.logoutBtn,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={styles.logoutBtnText}>{loggingOut ? 'Keluar...' : 'Keluar'}</Text>
-            </Pressable>
+      <View style={styles.appShell}>
+        <ScrollView contentContainerStyle={styles.dashboardContent} showsVerticalScrollIndicator={false}>
+          <Text style={styles.greeting}>Selamat Pagi,{`\n`}{currentUser.name.split(' ')[0]}!</Text>
+          <Pressable style={({ pressed }) => [styles.todayBanner, pressed && styles.pressed]} onPress={() => todaySession && router.push(`/praktikan/${todaySession.id}`)}>
+            <View style={styles.flexOne}><Text style={styles.todayTitle}>Praktikum Hari Ini</Text><Text style={styles.todaySummary}>{todaySession ? `${todaySession.practicalName} · ${todaySession.startTime} WIB` : 'Tidak ada jadwal hari ini'}</Text></View>
+            <Ionicons name="calendar-outline" size={28} color="#232420" />
+          </Pressable>
+          <View style={styles.featureGrid}>
+            {feature('Jadwal Praktikum', 'Lihat seluruh jadwal dan sesi mendatang.', '#FFE4A1', 'calendar-outline', '/praktikan')}
+            {feature('Peta Laboratorium', 'Temukan lokasi dan informasi laboratorium.', '#E3E7D8', 'map-outline', '/maps')}
+            {feature('Pengajuan Izin', 'Ajukan izin ketidakhadiran praktikum.', '#F1D3CC', 'document-text-outline', '/praktikan/izin')}
+            {feature('Riwayat Presensi', 'Pantau catatan kehadiran Anda.', '#E1D9FA', 'time-outline', '/praktikan/riwayat')}
           </View>
-
-          <Pressable
-            onPress={() => router.push('/praktikan/riwayat')}
-            style={({ pressed }) => [
-              styles.historyBtn,
-              pressed && styles.pressed,
-            ]}
-          >
-            <View>
-              <Text style={styles.historyLabel}>Riwayat Presensi</Text>
-              <Text style={styles.historySub}>
-                {myRecords.length} sesi tercatat
-              </Text>
-            </View>
-            <Text style={styles.historyLink}>Lihat →</Text>
-          </Pressable>
-
-           <Pressable
-             onPress={() => router.push('/praktikan/izin')}
-            style={({ pressed }) => [styles.permissionBtn, pressed && styles.pressed]}
-          >
-            <View>
-              <Text style={styles.permissionLabel}>Pengajuan Izin</Text>
-              <Text style={styles.permissionSub}>Ajukan alasan ketidakhadiran dan pantau statusnya</Text>
-            </View>
-            <Text style={styles.historyLink}>Lihat →</Text>
-           </Pressable>
-
-          <Pressable
-            onPress={() => router.push('/maps')}
-            style={({ pressed }) => [styles.permissionBtn, pressed && styles.pressed]}
-          >
-            <View>
-              <Text style={styles.permissionLabel}>Peta Laboratorium</Text>
-              <Text style={styles.permissionSub}>Lihat lokasi dan aktivitas praktikum</Text>
-            </View>
-            <Text style={styles.historyLink}>Buka →</Text>
-          </Pressable>
-
-          {/* Filter Chips */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterRow}
-          >
-            {FILTER_OPTIONS.map((item) => {
-              const isActive = selectedFilter === item.key;
-              return (
-                <Pressable
-                  key={item.key}
-                  onPress={() => setSelectedFilter(item.key)}
-                  style={[styles.filterChip, isActive && styles.filterChipActive]}
-                >
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      isActive && styles.filterChipTextActive,
-                    ]}
-                  >
-                    {item.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {sessionsLoading ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>Memuat jadwal...</Text>
-              <Text style={styles.emptySubtitle}>Mengambil sesi praktikum terbaru.</Text>
-            </View>
-          ) : attendanceError ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>Jadwal tidak dapat dimuat</Text>
-              <Text style={styles.emptySubtitle}>{attendanceError}</Text>
-            </View>
-          ) : filteredSessions.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>
-                {selectedFilter === 'all'
-                  ? 'Belum ada jadwal'
-                  : 'Tidak ada jadwal'}
-              </Text>
-              <Text style={styles.emptySubtitle}>
-                {selectedFilter === 'all'
-                  ? 'Anda belum terdaftar pada sesi praktikum mana pun.'
-                  : `Belum ada sesi dengan status ${
-                      FILTER_OPTIONS.find((f) => f.key === selectedFilter)?.label
-                    }.`}
-              </Text>
-            </View>
-          ) : (
-            <View>
-              {filteredSessions.map((session) => {
-                const hasRecorded = myRecords.some(
-                  (r) => r.sessionId === session.id
-                );
-                let footerNote = 'Sesi ditutup';
-                if (session.status === 'open') {
-                  footerNote = hasRecorded ? 'Sudah presensi' : 'Siap presensi';
-                } else if (session.status === 'upcoming') {
-                  footerNote = 'Belum dibuka';
-                }
-
-                return (
-                  <PraktikanSessionCard
-                    key={session.id}
-                    session={session}
-                    footerNote={footerNote}
-                    onPress={() => router.push(`/praktikan/${session.id}`)}
-                  />
-                );
-              })}
-            </View>
-          )}
+          {(sessionsLoading || attendanceError || filteredSessions.length > 0) && <View style={styles.scheduleHint}><Text style={styles.scheduleHintTitle}>{sessionsLoading ? 'Memuat jadwal...' : attendanceError ? 'Jadwal tidak dapat dimuat' : `${filteredSessions.length} sesi tersedia`}</Text>{attendanceError ? <Text style={styles.scheduleHintText}>{attendanceError}</Text> : null}</View>}
+        </ScrollView>
+        <View style={styles.bottomNav}>
+          {([['Beranda', 'home-outline', '/praktikan'], ['Riwayat', 'time-outline', '/praktikan/riwayat'], ['Peta', 'map-outline', '/maps'], ['Izin', 'document-text-outline', '/praktikan/izin']] as const).map(([label, icon, path]) => <Pressable key={label} onPress={() => go(path)} style={({ pressed }) => [styles.navItem, path === '/praktikan' && styles.navActive, pressed && styles.pressed]}><Ionicons name={icon} size={22} color={path === '/praktikan' ? '#232420' : '#5E5F58'} /><Text style={[styles.navLabel, path === '/praktikan' && styles.navLabelActive]}>{label}</Text></Pressable>)}
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -247,8 +136,26 @@ export default function PraktikanScheduleScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2F1ED',
   },
+  appShell: { flex: 1, backgroundColor: '#F2F1ED', borderRadius: 32, overflow: 'hidden' },
+  dashboardContent: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32, gap: 24 },
+  flexOne: { flex: 1 },
+  todayBanner: { minHeight: 112, padding: 16, borderRadius: 28, backgroundColor: '#FFC332', flexDirection: 'row', alignItems: 'center', gap: 12 },
+  todayTitle: { color: '#232420', fontSize: 18, lineHeight: 26, fontWeight: '500' },
+  todaySummary: { color: '#232420', fontSize: 13, lineHeight: 19, marginTop: 8 },
+  featureGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  featureCard: { width: '47.5%', minHeight: 204, padding: 16, borderRadius: 28, gap: 12 },
+  featureTitle: { color: '#232420', fontSize: 17, lineHeight: 24, fontWeight: '500' },
+  featureDescription: { color: '#232420', fontSize: 13, lineHeight: 19 },
+  scheduleHint: { padding: 16, borderRadius: 16, backgroundColor: '#FFFFFF' },
+  scheduleHintTitle: { color: '#232420', fontWeight: '600', fontSize: 14 },
+  scheduleHintText: { color: '#5E5F58', marginTop: 4, fontSize: 13 },
+  bottomNav: { height: 84, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 24, flexDirection: 'row', gap: 4, backgroundColor: '#F2F1ED' },
+  navItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 999, padding: 4 },
+  navActive: { backgroundColor: '#FFE4A1' },
+  navLabel: { color: '#5E5F58', fontSize: 11, lineHeight: 16 },
+  navLabelActive: { color: '#232420', fontWeight: '600' },
   scrollContent: {
     padding: 16,
     alignItems: 'center',
@@ -269,9 +176,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   greeting: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
+    color: '#232420',
+    fontSize: 32,
+    lineHeight: 38,
+    letterSpacing: -0.64,
+    fontWeight: '500',
   },
   profileSub: {
     fontSize: 12,
