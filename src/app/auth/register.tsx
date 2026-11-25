@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Modal,
   Pressable,
   SafeAreaView,
@@ -90,8 +91,10 @@ export default function RegisterScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.container}>
+          <View style={styles.brandPanel}><Image source={require('../../../assets/diplabs-logo.svg')} resizeMode="contain" style={styles.logo}/><Text style={styles.brand}>DIPLabs</Text></View>
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Buat Akun Baru</Text>
+            <Text style={styles.cardTitle}>Buat Akun Praktikan</Text>
+            <Text style={styles.intro}>Daftar menggunakan identitas mahasiswa Anda.</Text>
 
             <Text style={styles.label}>Peran Pengguna</Text>
             <View style={styles.roleSegmented}>
@@ -226,15 +229,8 @@ export default function RegisterScreen() {
               )}
             </Pressable>
 
-            <View style={styles.footerRow}>
-              <Text style={styles.footerText}>Sudah punya akun?</Text>
-              <Pressable
-                onPress={() => router.back()}
-                disabled={submitting}
-              >
-                <Text style={styles.footerLink}>Masuk</Text>
-              </Pressable>
-            </View>
+            <Pressable onPress={() => router.back()} disabled={submitting} style={styles.loginLink}><Text style={styles.footerLink}>Sudah punya akun? Masuk</Text></Pressable>
+            <Text style={styles.caption}>Sistem Manajemen Praktikum Laboratorium</Text>
           </View>
         </View>
       <Modal
@@ -299,31 +295,25 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2F1ED',
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: 20,
+    padding: 24,
     alignItems: 'center',
   },
   container: {
-    width: '100%',
-    maxWidth: 420,
+    width: '100%', maxWidth: 420, gap: 28,
   },
+  brandPanel: { height: 185, borderRadius: 28, backgroundColor: '#232420', alignItems: 'center', justifyContent: 'center' },
+  logo: { width: 76, height: 64, marginBottom: 12 }, brand: { color: '#FFFFFF', fontSize: 30, fontWeight: '800' },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    backgroundColor: 'transparent', padding: 0,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 16,
+    fontSize: 25, fontWeight: '500', color: '#232420', marginBottom: 12,
   },
+  intro: { fontSize: 14, color: '#5E5F58', marginBottom: 20 },
   roleSegmented: {
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',
@@ -372,14 +362,11 @@ const styles = StyleSheet.create({
     color: '#DC2626',
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
+    borderWidth: 0, borderRadius: 22,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#0F172A',
-    backgroundColor: '#F8FAFC',
+    color: '#232420', backgroundColor: '#FFFFFF',
   },
   classSelect: {
     flexDirection: 'row',
@@ -497,35 +484,30 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   submitBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#FFC332',
     paddingVertical: 13,
-    borderRadius: 10,
+    borderRadius: 26,
     alignItems: 'center',
   },
   btnDisabled: {
     backgroundColor: '#93C5FD',
   },
   submitBtnText: {
-    color: '#FFFFFF',
+    color: '#232420',
     fontSize: 14,
     fontWeight: '700',
   },
-  footerRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 16,
-  },
+  loginLink: { marginTop: 16, backgroundColor: '#FFFFFF', borderRadius: 26, paddingVertical: 14, alignItems: 'center' },
   footerText: {
     fontSize: 13,
     color: '#64748B',
   },
   footerLink: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#2563EB',
+    fontWeight: '500',
+    color: '#232420',
   },
+  caption: { marginTop: 16, color: '#5E5F58', fontSize: 11 },
   pressed: {
     opacity: 0.85,
   },

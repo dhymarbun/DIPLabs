@@ -93,15 +93,13 @@ export function SessionCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderRadius: 28,
+    padding: 24,
+    marginBottom: 16,
   },
   cardPressed: {
     opacity: 0.9,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFF8E8',
   },
   topRow: {
     flexDirection: 'row',
@@ -111,29 +109,26 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   classBadge: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F2F1ED',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 12,
   },
   classBadgeText: {
-    color: '#1D4ED8',
+    color: '#232420',
     fontSize: 12,
     fontWeight: '700',
   },
   title: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: '500',
+    color: '#232420',
     lineHeight: 21,
     marginBottom: 10,
   },
   metaContainer: {
     gap: 5,
     paddingVertical: 10,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#F1F5F9',
   },
   metaRow: {
     flexDirection: 'row',
@@ -142,11 +137,11 @@ const styles = StyleSheet.create({
   },
   metaLabel: {
     fontSize: 13,
-    color: '#64748B',
+    color: '#5E5F58',
   },
   metaValue: {
     fontSize: 13,
-    color: '#1E293B',
+    color: '#232420',
     fontWeight: '500',
     flex: 1,
     textAlign: 'right',
@@ -160,11 +155,11 @@ const styles = StyleSheet.create({
   attendanceCountText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#475569',
+    color: '#5E5F58',
   },
   detailLink: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#2563EB',
+    color: '#232420',
   },
 });

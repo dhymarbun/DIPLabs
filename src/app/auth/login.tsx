@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -59,9 +60,13 @@ export default function LoginScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.container}>
-          <View style={styles.headerBlock}>
+          <View style={styles.brandPanel}>
+            <Image
+              source={require('../../../assets/diplabs-logo.svg')}
+              resizeMode="contain"
+              style={styles.logo}
+            />
             <Text style={styles.brand}>DIPLabs</Text>
-            <Text style={styles.subtitle}>Manajemen Presensi Praktikum</Text>
           </View>
 
           {!isFirebaseConfigured ? (
@@ -76,8 +81,9 @@ export default function LoginScreen() {
             </View>
           ) : null}
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Masuk ke Akun</Text>
+          <View style={styles.form}>
+            <Text style={styles.cardTitle}>Selamat Datang Kembali</Text>
+            <Text style={styles.intro}>Masuk untuk mengelola praktikum dan presensi Anda.</Text>
 
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>
@@ -108,7 +114,7 @@ export default function LoginScreen() {
                   setPassword(val);
                   if (errorMessage) setErrorMessage(null);
                 }}
-                placeholder="Masukkan password"
+                placeholder="Masukkan kata sandi"
                 placeholderTextColor="#94A3B8"
                 secureTextEntry
                 editable={!submitting}
@@ -138,15 +144,14 @@ export default function LoginScreen() {
               )}
             </Pressable>
 
-            <View style={styles.registerPromptRow}>
-              <Text style={styles.registerPromptText}>Belum punya akun?</Text>
-              <Pressable
-                onPress={() => router.push('/auth/register')}
-                disabled={submitting}
-              >
-                <Text style={styles.registerLink}>Daftar Sekarang</Text>
-              </Pressable>
-            </View>
+            <Pressable
+              onPress={() => router.push('/auth/register')}
+              disabled={submitting}
+              style={({ pressed }) => [styles.registerButton, pressed && !submitting && styles.pressed]}
+            >
+              <Text style={styles.registerLink}>Belum punya akun? Daftar</Text>
+            </Pressable>
+            <Text style={styles.caption}>Sistem Manajemen Praktikum Laboratorium</Text>
           </View>
         </View>
       </ScrollView>
@@ -157,32 +162,31 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2F1ED',
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 24,
     alignItems: 'center',
   },
   container: {
     width: '100%',
     maxWidth: 420,
-    gap: 16,
+    gap: 28,
   },
-  headerBlock: {
+  brandPanel: {
+    height: 185,
+    backgroundColor: '#232420',
+    borderRadius: 28,
     alignItems: 'center',
-    marginBottom: 4,
+    justifyContent: 'center',
   },
+  logo: { width: 76, height: 64, marginBottom: 12 },
   brand: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: '800',
-    color: '#0F172A',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    marginTop: 2,
+    color: '#FFFFFF',
   },
   configWarning: {
     backgroundColor: '#FEF3C7',
@@ -202,18 +206,20 @@ const styles = StyleSheet.create({
     color: '#92400E',
     lineHeight: 17,
   },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+  form: {
+    gap: 0,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontSize: 25,
+    fontWeight: '500',
+    color: '#232420',
     marginBottom: 16,
+  },
+  intro: {
+    fontSize: 14,
+    color: '#5E5F58',
+    lineHeight: 20,
+    marginBottom: 20,
   },
   fieldGroup: {
     marginBottom: 14,
@@ -221,21 +227,20 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#334155',
+    color: '#232420',
     marginBottom: 6,
   },
   requiredMark: {
     color: '#DC2626',
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
+    borderWidth: 0,
+    borderRadius: 22,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#0F172A',
-    backgroundColor: '#F8FAFC',
+    color: '#232420',
+    backgroundColor: '#FFFFFF',
   },
   errorBox: {
     backgroundColor: '#FEF2F2',
@@ -251,35 +256,32 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   loginBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#FFC332',
     paddingVertical: 13,
-    borderRadius: 10,
+    borderRadius: 26,
     alignItems: 'center',
   },
   btnDisabled: {
     backgroundColor: '#93C5FD',
   },
   loginBtnText: {
-    color: '#FFFFFF',
+    color: '#232420',
     fontSize: 14,
     fontWeight: '700',
   },
-  registerPromptRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
+  registerButton: {
     marginTop: 16,
-  },
-  registerPromptText: {
-    fontSize: 13,
-    color: '#64748B',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 26,
+    paddingVertical: 14,
+    alignItems: 'center',
   },
   registerLink: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#2563EB',
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#232420',
   },
+  caption: { color: '#5E5F58', fontSize: 11, marginTop: 16 },
   pressed: {
     opacity: 0.85,
   },
