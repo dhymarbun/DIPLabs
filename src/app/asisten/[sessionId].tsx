@@ -14,6 +14,7 @@ import { formatIndonesianDate } from '../../components/asisten/SessionCard';
 import { StatusBadge } from '../../components/asisten/StatusBadge';
 import { useAttendance } from '../../context/AttendanceContext';
 import { getScheduleStatus, getScheduleMessage } from '../../utils/sessionSchedule';
+import { colors } from '../../theme/tokens';
 
 export function formatCheckInTime(isoString: string): string {
   const date = new Date(isoString);
@@ -308,204 +309,43 @@ export default function AsistenSessionDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  scrollContent: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  container: {
-    width: '100%',
-    maxWidth: 640,
-    gap: 14,
-  },
-  noticeBox: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-  },
-  noticeBoxError: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-  },
-  noticeText: {
-    fontSize: 13,
-    color: '#1E3A8A',
-    fontWeight: '600',
-  },
-  noticeTextError: {
-    color: '#991B1B',
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  classBadge: {
-    backgroundColor: '#EFF6FF',
-    color: '#1D4ED8',
-    fontSize: 12,
-    fontWeight: '700',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  title: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 14,
-  },
-  infoList: {
-    borderTopWidth: 1,
-    borderColor: '#F1F5F9',
-    paddingTop: 12,
-    gap: 8,
-  },
-  infoItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  infoLabel: {
-    fontSize: 13,
-    color: '#64748B',
-  },
-  infoValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1E293B',
-    flex: 1,
-    textAlign: 'right',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 16,
-  },
-  actionBtn: {
-    flex: 1,
-    paddingVertical: 11,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  openBtn: {
-    backgroundColor: '#16A34A',
-  },
-  closeBtn: {
-    backgroundColor: '#DC2626',
-  },
-  btnDisabled: {
-    backgroundColor: '#E2E8F0',
-  },
-  actionBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  btnTextDisabled: {
-    color: '#64748B',
-  },
-  recapHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  linkText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#2563EB',
-  },
-  emptyText: {
-    fontSize: 13,
-    color: '#64748B',
-    paddingVertical: 12,
-  },
-  recordList: {
-    gap: 8,
-  },
-  recordItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderColor: '#F1F5F9',
-    gap: 8,
-  },
-  recordNo: {
-    fontSize: 13,
-    color: '#64748B',
-    width: 22,
-  },
-  recordMain: {
-    flex: 1,
-  },
-  recordName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  recordSub: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-  recordTime: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#166534',
-  },
-  notFound: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    gap: 12,
-  },
-  notFoundText: {
-    fontSize: 15,
-    color: '#475569',
-  },
-  backBtn: {
-    backgroundColor: '#2563EB',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  backBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  scheduleMessage: {
-    marginTop: 10,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#FEF3C7',
-    borderWidth: 1,
-    borderColor: '#FCD34D',
-  },
-  scheduleMessageText: {
-    fontSize: 13,
-    color: '#92400E',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
+  safeArea: { flex: 1, backgroundColor: colors.canvas },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32, alignItems: 'center' },
+  container: { width: '100%', maxWidth: 640, gap: 16 },
+  noticeBox: { backgroundColor: colors.yellowSoft, borderColor: colors.yellowSoft, borderWidth: 1, borderRadius: 20, padding: 12 },
+  noticeBoxError: { backgroundColor: colors.rose, borderColor: colors.rose },
+  noticeText: { fontSize: 13, color: colors.ink, fontWeight: '600' },
+  noticeTextError: { color: colors.ink },
+  card: { backgroundColor: colors.card, borderRadius: 28, padding: 20, borderWidth: 1, borderColor: colors.card },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  classBadge: { backgroundColor: colors.sage, color: colors.ink, fontSize: 12, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
+  title: { fontSize: 22, fontWeight: '600', color: colors.ink, marginBottom: 14 },
+  infoList: { borderTopWidth: 1, borderColor: colors.canvas, paddingTop: 12, gap: 8 },
+  infoItem: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  infoLabel: { fontSize: 13, color: colors.muted },
+  infoValue: { fontSize: 13, fontWeight: '600', color: colors.ink, flex: 1, textAlign: 'right' },
+  actionRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  actionBtn: { flex: 1, paddingVertical: 13, borderRadius: 999, alignItems: 'center' },
+  openBtn: { backgroundColor: colors.successInk },
+  closeBtn: { backgroundColor: colors.danger },
+  btnDisabled: { backgroundColor: colors.border },
+  actionBtnText: { fontSize: 13, fontWeight: '700', color: colors.card },
+  btnTextDisabled: { color: colors.muted },
+  recapHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: colors.ink },
+  linkText: { fontSize: 13, fontWeight: '600', color: colors.muted },
+  emptyText: { fontSize: 13, color: colors.muted, paddingVertical: 12 },
+  recordList: { gap: 8 },
+  recordItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderColor: colors.canvas, gap: 8 },
+  recordNo: { fontSize: 13, color: colors.muted, width: 22 },
+  recordMain: { flex: 1 },
+  recordName: { fontSize: 14, fontWeight: '600', color: colors.ink },
+  recordSub: { fontSize: 12, color: colors.muted },
+  recordTime: { fontSize: 13, fontWeight: '600', color: colors.successInk },
+  notFound: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, gap: 12 },
+  notFoundText: { fontSize: 15, color: colors.muted },
+  backBtn: { backgroundColor: colors.yellow, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999 },
+  backBtnText: { color: colors.ink, fontSize: 13, fontWeight: '600' },
+  scheduleMessage: { marginTop: 10, padding: 12, borderRadius: 20, backgroundColor: colors.yellowSoft, borderWidth: 1, borderColor: colors.yellowSoft },
+  scheduleMessageText: { fontSize: 13, color: colors.ink, fontWeight: '600', textAlign: 'center' },
 });

@@ -14,6 +14,7 @@ import { formatIndonesianDate } from '../../../components/asisten/SessionCard';
 import { StatusBadge } from '../../../components/asisten/StatusBadge';
 import { useAttendance } from '../../../context/AttendanceContext';
 import { formatCheckInTime } from '../[sessionId]';
+import { colors } from '../../../theme/tokens';
 
 export default function AsistenSessionRecapScreen() {
   const router = useRouter();
@@ -184,161 +185,33 @@ export default function AsistenSessionRecapScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  scrollContent: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  container: {
-    width: '100%',
-    maxWidth: 640,
-    gap: 14,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  classTag: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1D4ED8',
-    backgroundColor: '#EFF6FF',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#64748B',
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 14,
-  },
-  metricBox: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    padding: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  metricPresent: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#166534',
-  },
-  metricAbsent: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#991B1B',
-  },
-  metricTotal: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  metricLabel: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  closeBtn: {
-    marginTop: 14,
-    backgroundColor: '#DC2626',
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  closeBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 10,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: '#64748B',
-    paddingVertical: 8,
-  },
-  list: {
-    gap: 8,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderColor: '#F1F5F9',
-    gap: 8,
-  },
-  rowNo: {
-    fontSize: 13,
-    color: '#64748B',
-    width: 22,
-  },
-  rowMain: {
-    flex: 1,
-  },
-  rowName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  rowSub: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-  rowTime: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#166534',
-  },
-  notFound: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    gap: 12,
-  },
-  notFoundText: {
-    fontSize: 15,
-    color: '#475569',
-  },
-  backBtn: {
-    backgroundColor: '#2563EB',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  backBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600',
-  },
+  safeArea: { flex: 1, backgroundColor: colors.canvas },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32, alignItems: 'center' },
+  container: { width: '100%', maxWidth: 640, gap: 16 },
+  card: { backgroundColor: colors.card, borderRadius: 28, padding: 20, borderWidth: 1, borderColor: colors.card },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  classTag: { fontSize: 12, fontWeight: '700', color: colors.ink, backgroundColor: colors.sage, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
+  title: { fontSize: 22, fontWeight: '600', color: colors.ink, marginBottom: 4 },
+  subtitle: { fontSize: 13, color: colors.muted },
+  metricsRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  metricBox: { flex: 1, backgroundColor: colors.canvas, borderRadius: 20, padding: 10, alignItems: 'center' },
+  metricPresent: { fontSize: 18, fontWeight: '700', color: colors.successInk },
+  metricAbsent: { fontSize: 18, fontWeight: '700', color: colors.danger },
+  metricTotal: { fontSize: 18, fontWeight: '700', color: colors.ink },
+  metricLabel: { fontSize: 11, color: colors.muted, marginTop: 2 },
+  closeBtn: { marginTop: 14, backgroundColor: colors.danger, paddingVertical: 13, borderRadius: 999, alignItems: 'center' },
+  closeBtnText: { color: colors.card, fontSize: 13, fontWeight: '700' },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: colors.ink, marginBottom: 10 },
+  emptyText: { fontSize: 13, color: colors.muted, paddingVertical: 8 },
+  list: { gap: 8 },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderColor: colors.canvas, gap: 8 },
+  rowNo: { fontSize: 13, color: colors.muted, width: 22 },
+  rowMain: { flex: 1 },
+  rowName: { fontSize: 14, fontWeight: '600', color: colors.ink },
+  rowSub: { fontSize: 12, color: colors.muted },
+  rowTime: { fontSize: 13, fontWeight: '600', color: colors.successInk },
+  notFound: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, gap: 12 },
+  notFoundText: { fontSize: 15, color: colors.muted },
+  backBtn: { backgroundColor: colors.yellow, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999 },
+  backBtnText: { color: colors.ink, fontSize: 13, fontWeight: '600' },
 });

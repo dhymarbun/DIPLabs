@@ -1,0 +1,15 @@
+export const colors = {
+  canvas: '#F2F1ED',
+  ink: '#232420',
+  muted: '#5E5F58',
+  card: '#FFFFFF',
+  yellow: '#FFC332',
+  yellowSoft: '#FFE4A1',
+  sage: '#E3E7D8',
+  rose: '#F1D3CC',
+  lavender: '#E1D9FA',
+  success: '#E5EDDA',
+  successInk: '#3E5B28',
+  danger: '#C96D5D',
+  border: '#D8D8D0',
+} as const;

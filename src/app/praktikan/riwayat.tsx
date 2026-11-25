@@ -25,7 +25,7 @@ export default function PraktikanHistoryScreen() {
   const { currentUser, sessions, getAttendanceForStudent } = useAttendance();
 
   useEffect(() => {
-    navigation.setOptions({ title: 'Riwayat Presensi' });
+    navigation.setOptions({ title: 'Riwayat Presensi', headerShown: false });
   }, [navigation]);
 
   const isPraktikan = currentUser?.role === 'praktikan';
@@ -63,7 +63,7 @@ export default function PraktikanHistoryScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.container}>
+        <View style={styles.container}><Pressable onPress={() => router.back()}><Text style={styles.backText}>‹  Kembali</Text></Pressable><Text style={styles.pageTitle}>Riwayat Presensi</Text>
           <View style={styles.summaryCard}>
             <Text style={styles.summaryLabel}>Total Kehadiran</Text>
             <Text style={styles.summaryValue}>{myRecords.length}</Text>
@@ -145,66 +145,64 @@ export function formatIndonesianDateShort(isoDate: string): string {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2F1ED',
   },
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 32,
     alignItems: 'center',
   },
   container: {
     width: '100%',
     maxWidth: 640,
-    gap: 14,
+    gap: 16,
   },
   summaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    backgroundColor: '#E1D9FA',
+    borderRadius: 28,
+    padding: 20,
     alignItems: 'center',
   },
   summaryLabel: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#5E5F58',
     fontWeight: '600',
   },
   summaryValue: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#232420',
     marginTop: 2,
   },
   summarySub: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#5E5F58',
   },
   emptyState: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 28,
     padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#FFFFFF',
   },
   emptyTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#232420',
     marginBottom: 4,
   },
   emptySubtitle: {
     fontSize: 13,
-    color: '#64748B',
+    color: '#5E5F58',
     textAlign: 'center',
     lineHeight: 19,
   },
   listCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderRadius: 28,
+    padding: 20,
     gap: 12,
   },
   row: {
@@ -213,7 +211,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#F2F1ED',
   },
   rowMain: {
     flex: 1,
@@ -222,16 +220,16 @@ const styles = StyleSheet.create({
   rowTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0F172A',
+    color: '#232420',
   },
   rowSub: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#5E5F58',
   },
   rowTime: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#166534',
+    color: '#3E5B28',
   },
   guard: {
     flex: 1,
@@ -266,4 +264,6 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.85,
   },
+  pageTitle: { color: '#232420', fontSize: 32, lineHeight: 38, fontWeight: '500' },
+  backText: { color: '#5E5F58', fontWeight: '600', paddingVertical: 8 },
 });

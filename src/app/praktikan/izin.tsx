@@ -25,7 +25,7 @@ export default function PraktikanPermissionHistoryScreen() {
   const { myPermissions, permissionsLoading, permissionsError } = usePermissions();
 
   useEffect(() => {
-    navigation.setOptions({ title: 'Pengajuan Izin' });
+    navigation.setOptions({ title: 'Pengajuan Izin', headerShown: false });
   }, [navigation]);
 
   const sessionNames = useMemo(
@@ -50,6 +50,7 @@ export default function PraktikanPermissionHistoryScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content}>
+        <Pressable onPress={() => router.back()}><Text style={styles.backText}>‹  Kembali</Text></Pressable>
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>Riwayat Pengajuan</Text>
@@ -102,25 +103,26 @@ export default function PraktikanPermissionHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, gap: 12, alignSelf: 'center', width: '100%', maxWidth: 640 },
+  safeArea: { flex: 1, backgroundColor: '#F2F1ED' },
+  content: { padding: 24, gap: 16, alignSelf: 'center', width: '100%', maxWidth: 640 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  title: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-  subtitle: { color: '#64748B', fontSize: 13, lineHeight: 19, marginTop: 4 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 15, borderWidth: 1, borderColor: '#E2E8F0', gap: 8 },
-  errorCard: { backgroundColor: '#FEF2F2', borderRadius: 12, padding: 15, borderWidth: 1, borderColor: '#FECACA', gap: 4 },
-  errorTitle: { color: '#991B1B', fontWeight: '700' },
-  errorText: { color: '#B91C1C', fontSize: 13 },
-  emptyTitle: { color: '#1E293B', fontWeight: '700' },
+  title: { fontSize: 32, lineHeight: 38, fontWeight: '500', color: '#232420' },
+  subtitle: { color: '#5E5F58', fontSize: 13, lineHeight: 19, marginTop: 4 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 28, padding: 20, gap: 10 },
+  errorCard: { backgroundColor: '#F1D3CC', borderRadius: 28, padding: 20, gap: 6 },
+  errorTitle: { color: '#232420', fontWeight: '700' },
+  errorText: { color: '#5E5F58', fontSize: 13 },
+  emptyTitle: { color: '#232420', fontWeight: '700' },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
-  sessionName: { flex: 1, color: '#0F172A', fontWeight: '700', fontSize: 15 },
+  sessionName: { flex: 1, color: '#232420', fontWeight: '700', fontSize: 15 },
   status: { fontSize: 12, fontWeight: '700' },
   reason: { color: '#334155', fontSize: 13, lineHeight: 19 },
-  aiText: { color: '#64748B', fontSize: 12 },
-  note: { color: '#475569', fontSize: 12, fontStyle: 'italic' },
+  aiText: { color: '#5E5F58', fontSize: 12 },
+  note: { color: '#5E5F58', fontSize: 12, fontStyle: 'italic' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 8 },
-  primaryButton: { backgroundColor: '#2563EB', borderRadius: 10, paddingHorizontal: 20, paddingVertical: 11, marginTop: 8 },
-  primaryButtonText: { color: '#FFFFFF', fontWeight: '700' },
-  secondaryButton: { backgroundColor: '#EFF6FF', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
-  secondaryButtonText: { color: '#2563EB', fontWeight: '700', fontSize: 12 },
+  primaryButton: { backgroundColor: '#FFC332', borderRadius: 999, paddingHorizontal: 20, paddingVertical: 13, marginTop: 8 },
+  primaryButtonText: { color: '#232420', fontWeight: '700' },
+  secondaryButton: { backgroundColor: '#FFE4A1', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9 },
+  secondaryButtonText: { color: '#232420', fontWeight: '700', fontSize: 12 },
+  backText: { color: '#5E5F58', fontWeight: '600', paddingVertical: 8 },
 });

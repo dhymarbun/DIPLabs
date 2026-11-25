@@ -15,6 +15,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useAttendance } from '../../context/AttendanceContext';
 import { usePermissions } from '../../context/PermissionContext';
 import { SessionStatus } from '../../types/attendance';
+import { colors } from '../../theme/tokens';
 
 type FilterType = 'all' | SessionStatus;
 
@@ -107,6 +108,7 @@ export default function AsistenScheduleScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.container}>
+          <Text style={styles.pageTitle}>Dashboard Asisten</Text>
           {/* User Header */}
           <View style={styles.profileRow}>
             <View style={{ flex: 1 }}>
@@ -254,191 +256,39 @@ export default function AsistenScheduleScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  scrollContent: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  container: {
-    width: '100%',
-    maxWidth: 640,
-    gap: 14,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-    gap: 10,
-  },
-  loadingText: {
-    fontSize: 13,
-    color: '#64748B',
-  },
-  guardTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  guardSub: {
-    fontSize: 13,
-    color: '#64748B',
-    textAlign: 'center',
-  },
-  primaryBtn: {
-    backgroundColor: '#2563EB',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    marginTop: 6,
-  },
-  primaryBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  profileRow: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-  },
-  greeting: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  profileSub: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  logoutBtn: {
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-  },
-  logoutBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#991B1B',
-  },
-  quickNavRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  quickNavCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-  },
-  quickNavHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  quickNavTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1D4ED8',
-  },
-  quickNavSub: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 3,
-  },
-  badgePending: {
-    backgroundColor: '#DC2626',
-    borderRadius: 999,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  badgePendingText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  errorBanner: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-  },
-  errorBannerText: {
-    color: '#991B1B',
-    fontSize: 12,
-  },
-  pressed: {
-    opacity: 0.85,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-  },
-  filterChipActive: {
-    backgroundColor: '#2563EB',
-    borderColor: '#2563EB',
-  },
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#475569',
-  },
-  filterChipTextActive: {
-    color: '#FFFFFF',
-  },
-  emptyState: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 24,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  emptyTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 4,
-  },
-  emptySubtitle: {
-    fontSize: 13,
-    color: '#64748B',
-    textAlign: 'center',
-  },
-  seedBtn: {
-    marginTop: 14,
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 8,
-  },
-  seedBtnText: {
-    color: '#1D4ED8',
-    fontSize: 13,
-    fontWeight: '700',
-  },
+  safeArea: { flex: 1, backgroundColor: colors.canvas },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32, alignItems: 'center' },
+  container: { width: '100%', maxWidth: 640, gap: 16 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 10 },
+  loadingText: { fontSize: 13, color: colors.muted },
+  guardTitle: { fontSize: 17, fontWeight: '700', color: colors.ink },
+  guardSub: { fontSize: 13, color: colors.muted, textAlign: 'center' },
+  primaryBtn: { backgroundColor: colors.yellow, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 999, marginTop: 6 },
+  primaryBtnText: { color: colors.ink, fontSize: 13, fontWeight: '700' },
+  profileRow: { backgroundColor: colors.card, borderRadius: 28, padding: 14, borderWidth: 1, borderColor: colors.card, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
+  greeting: { fontSize: 24, fontWeight: '600', color: colors.ink },
+  profileSub: { fontSize: 12, color: colors.muted, marginTop: 2 },
+  logoutBtn: { backgroundColor: colors.rose, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999 },
+  logoutBtnText: { fontSize: 12, fontWeight: '700', color: colors.ink },
+  quickNavRow: { flexDirection: 'row', gap: 10 },
+  quickNavCard: { flex: 1, backgroundColor: colors.yellowSoft, borderRadius: 28, padding: 14, borderWidth: 1, borderColor: colors.yellowSoft },
+  quickNavHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  quickNavTitle: { fontSize: 14, fontWeight: '700', color: colors.ink },
+  quickNavSub: { fontSize: 12, color: colors.muted, marginTop: 3 },
+  badgePending: { backgroundColor: colors.ink, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 2 },
+  badgePendingText: { color: colors.card, fontSize: 11, fontWeight: '700' },
+  errorBanner: { backgroundColor: colors.rose, borderColor: colors.rose, borderWidth: 1, borderRadius: 20, padding: 12 },
+  errorBannerText: { color: colors.ink, fontSize: 12 },
+  pressed: { opacity: 0.85 },
+  filterRow: { flexDirection: 'row', gap: 8 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+  filterChipActive: { backgroundColor: colors.yellow, borderColor: colors.yellow },
+  filterChipText: { fontSize: 13, fontWeight: '600', color: colors.muted },
+  filterChipTextActive: { color: colors.ink },
+  emptyState: { backgroundColor: colors.card, borderRadius: 28, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: colors.card },
+  emptyTitle: { fontSize: 15, fontWeight: '700', color: colors.ink, marginBottom: 4 },
+  emptySubtitle: { fontSize: 13, color: colors.muted, textAlign: 'center' },
+  pageTitle: { color: colors.ink, fontSize: 32, lineHeight: 38, fontWeight: '500' },
+  seedBtn: { marginTop: 14, backgroundColor: colors.sage, borderColor: colors.sage, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999 },
+  seedBtnText: { color: colors.ink, fontSize: 13, fontWeight: '700' },
 });

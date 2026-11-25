@@ -23,7 +23,7 @@ export default function LocationAttendanceScreen() {
     (session.labId && lab.id === session.labId) || lab.room.toLowerCase() === (session.room ?? '').toLowerCase() || lab.name.toLowerCase() === (session.room ?? '').toLowerCase()), [laboratories, session]);
   const record = authUser ? getAttendanceForStudent(authUser.uid).find((item) => item.sessionId === sessionId) : undefined;
 
-  useEffect(() => { navigation.setOptions({ title: 'Presensi Berbasis Lokasi' }); }, [navigation]);
+  useEffect(() => { navigation.setOptions({ title: 'Presensi Berbasis Lokasi', headerShown: false }); }, [navigation]);
 
   const checkLocation = async () => {
     setChecking(true); setFeedback(null);
@@ -39,7 +39,7 @@ export default function LocationAttendanceScreen() {
   };
 
   if (!session) return <SafeAreaView style={styles.safe}><View style={styles.center}><Text>Sesi tidak ditemukan.</Text></View></SafeAreaView>;
-  return <SafeAreaView style={styles.safe}><ScrollView contentContainerStyle={styles.content}><View style={styles.card}>
+  return <SafeAreaView style={styles.safe}><ScrollView contentContainerStyle={styles.content}><Pressable onPress={() => router.back()} style={styles.topBack}><Text style={styles.backText}>‹  Kembali</Text></Pressable><Text style={styles.screenTitle}>Presensi</Text><View style={styles.card}>
     <View style={styles.row}><Text style={styles.className}>{session.className}</Text><StatusBadge status={session.status} /></View>
     <Text style={styles.title}>{session.practicalName}</Text>
     <Text style={styles.meta}>{formatIndonesianDate(session.date)} · {session.startTime}–{session.endTime} WIB</Text>
@@ -54,4 +54,4 @@ export default function LocationAttendanceScreen() {
   </View></ScrollView></SafeAreaView>;
 }
 
-const styles = StyleSheet.create({ safe: { flex: 1, backgroundColor: '#F8FAFC' }, content: { padding: 16, gap: 14 }, card: { backgroundColor: '#FFF', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#E2E8F0', gap: 10 }, row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, className: { color: '#1D4ED8', fontWeight: '700' }, title: { fontSize: 19, fontWeight: '700', color: '#0F172A' }, meta: { color: '#475569', fontSize: 13 }, heading: { fontSize: 16, fontWeight: '700', color: '#0F172A' }, help: { color: '#475569', lineHeight: 20 }, feedback: { color: '#166534', fontWeight: '600' }, button: { backgroundColor: '#2563EB', padding: 13, borderRadius: 10, alignItems: 'center' }, disabled: { backgroundColor: '#CBD5E1' }, buttonText: { color: '#FFF', fontWeight: '700' }, back: { alignItems: 'center', padding: 8 }, backText: { color: '#2563EB', fontWeight: '600' }, center: { flex: 1, alignItems: 'center', justifyContent: 'center' } });
+const styles = StyleSheet.create({ safe: { flex: 1, backgroundColor: '#F2F1ED' }, content: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32, gap: 16 }, topBack: { paddingVertical: 8 }, screenTitle: { color: '#232420', fontSize: 32, lineHeight: 38, fontWeight: '500' }, card: { backgroundColor: '#FFFFFF', borderRadius: 28, padding: 20, gap: 12 }, row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, className: { color: '#5E5F58', fontWeight: '600', fontSize: 13 }, title: { fontSize: 22, fontWeight: '600', color: '#232420' }, meta: { color: '#5E5F58', fontSize: 13, lineHeight: 19 }, heading: { fontSize: 18, lineHeight: 26, fontWeight: '600', color: '#232420' }, help: { color: '#5E5F58', lineHeight: 20 }, feedback: { color: '#3E5B28', fontWeight: '600', backgroundColor: '#E5EDDA', padding: 12, borderRadius: 16 }, button: { backgroundColor: '#FFC332', padding: 15, borderRadius: 999, alignItems: 'center' }, disabled: { backgroundColor: '#D8D8D0' }, buttonText: { color: '#232420', fontWeight: '600', fontSize: 15 }, back: { alignItems: 'center', padding: 8 }, backText: { color: '#5E5F58', fontWeight: '600' }, center: { flex: 1, alignItems: 'center', justifyContent: 'center' } });

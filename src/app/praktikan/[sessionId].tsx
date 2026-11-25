@@ -310,10 +310,10 @@ export default function PraktikanSessionDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F2F1ED',
   },
   scrollContent: {
-    padding: 16,
+    padding: 24,
     alignItems: 'center',
   },
   container: {
@@ -346,10 +346,8 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 28,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   headerRow: {
     flexDirection: 'row',
@@ -369,7 +367,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#232420',
     marginBottom: 14,
   },
   infoList: {
@@ -414,16 +412,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   presensiBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#FFC332',
     paddingVertical: 13,
-    borderRadius: 10,
+    borderRadius: 28,
     alignItems: 'center',
   },
   presensiBtnDisabled: {
     backgroundColor: '#E2E8F0',
   },
   presensiBtnText: {
-    color: '#FFFFFF',
+    color: '#232420',
     fontSize: 14,
     fontWeight: '700',
   },
@@ -492,8 +490,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   infoBox: {
-    backgroundColor: '#F1F5F9',
-    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
     padding: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',

@@ -6,6 +6,7 @@ import { useAttendance } from '../../context/AttendanceContext';
 import { PracticumClass, PracticumSession } from '../../types/attendance';
 import { normalizeClassName } from '../../utils/classNames';
 import { Laboratory } from '../../types/notification';
+import { colors } from '../../theme/tokens';
 
 type TabKey = 'sessions' | 'classes' | 'participants' | 'laboratories';
 type FeedbackTone = 'error' | 'success' | 'info';
@@ -621,7 +622,7 @@ export default function ManagePracticumScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const legacyStyles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8FAFC' },
   scrollContent: { padding: 16, alignItems: 'center' },
   container: { width: '100%', maxWidth: 640, gap: 14 },
@@ -683,4 +684,68 @@ const styles = StyleSheet.create({
   quickPickRow: { flexDirection: 'row', gap: 6 },
   quickPickChip: { backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#CBD5E1', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
   quickPickChipText: { fontSize: 12, color: '#334155', fontWeight: '500' },
+});
+
+const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: colors.canvas },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32, alignItems: 'center' },
+  container: { width: '100%', maxWidth: 640, gap: 16 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 12 },
+  guardTitle: { fontSize: 16, fontWeight: '700', color: colors.ink },
+  tabsRow: { flexDirection: 'row', backgroundColor: colors.sage, borderRadius: 20, padding: 4, gap: 4 },
+  tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 16, alignItems: 'center' },
+  tabBtnActive: { backgroundColor: colors.card },
+  tabText: { fontSize: 12, fontWeight: '600', color: colors.muted },
+  tabTextActive: { color: colors.ink, fontWeight: '700' },
+  feedbackBox: { backgroundColor: colors.success, borderColor: colors.success, borderWidth: 1, borderRadius: 20, padding: 12 },
+  feedbackErrorBox: { backgroundColor: colors.rose, borderColor: colors.rose },
+  feedbackText: { fontSize: 13, color: colors.successInk, fontWeight: '600' },
+  feedbackErrorText: { color: colors.ink },
+  card: { backgroundColor: colors.card, borderRadius: 28, padding: 20 },
+  cardTitle: { fontSize: 18, fontWeight: '600', color: colors.ink, marginBottom: 12 },
+  label: { fontSize: 12, fontWeight: '600', color: colors.muted, marginBottom: 4 },
+  requiredMark: { color: colors.danger },
+  input: { borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: colors.ink, backgroundColor: colors.canvas, marginBottom: 12 },
+  inputHint: { fontSize: 11, color: colors.muted, marginTop: -8, marginBottom: 12 },
+  classSelect: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.canvas, marginBottom: 12, gap: 8 },
+  classSelectText: { fontSize: 13, color: colors.ink, flex: 1 },
+  classSelectPlaceholder: { color: colors.muted },
+  classSelectAction: { fontSize: 12, color: colors.ink, fontWeight: '600' },
+  classWarning: { fontSize: 11, color: colors.ink, marginTop: -8, marginBottom: 12 },
+  classError: { fontSize: 11, color: colors.danger, marginTop: -8, marginBottom: 12 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(35, 36, 32, 0.45)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalCard: { width: '100%', maxWidth: 420, maxHeight: '80%', backgroundColor: colors.card, borderRadius: 28, padding: 20, gap: 10 },
+  modalTitle: { fontSize: 18, fontWeight: '600', color: colors.ink },
+  modalList: { maxHeight: 340 },
+  modalListContent: { gap: 8 },
+  modalOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 12, backgroundColor: colors.canvas, gap: 8 },
+  modalOptionActive: { borderColor: colors.yellow, backgroundColor: colors.yellowSoft },
+  modalOptionText: { fontSize: 13, fontWeight: '600', color: colors.ink },
+  modalOptionTextActive: { color: colors.ink },
+  modalOptionMark: { fontSize: 11, fontWeight: '700', color: colors.ink },
+  row: { flexDirection: 'row', gap: 10 },
+  formActionRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  buttonRow: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  primaryBtn: { backgroundColor: colors.yellow, paddingVertical: 13, paddingHorizontal: 16, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  primaryBtnText: { color: colors.ink, fontSize: 13, fontWeight: '700' },
+  secondaryBtn: { backgroundColor: colors.sage, paddingVertical: 13, paddingHorizontal: 16, borderRadius: 999, alignItems: 'center' },
+  secondaryBtnText: { color: colors.ink, fontSize: 13, fontWeight: '600' },
+  emptyText: { fontSize: 13, color: colors.muted },
+  emptyState: { backgroundColor: colors.card, borderRadius: 28, padding: 24, alignItems: 'center' },
+  emptyTitle: { fontSize: 15, fontWeight: '700', color: colors.ink, marginBottom: 4 },
+  emptySubtitle: { fontSize: 13, color: colors.muted, textAlign: 'center' },
+  itemList: { gap: 10 },
+  itemRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderColor: colors.canvas, gap: 10 },
+  itemTitle: { fontSize: 14, fontWeight: '600', color: colors.ink },
+  itemSub: { fontSize: 12, color: colors.muted, marginTop: 2 },
+  itemActions: { flexDirection: 'row', gap: 6 },
+  editBadge: { backgroundColor: colors.yellowSoft, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+  editBadgeText: { color: colors.ink, fontSize: 12, fontWeight: '600' },
+  deleteBadge: { backgroundColor: colors.rose, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+  deleteBadgeText: { color: colors.ink, fontSize: 12, fontWeight: '600' },
+  studentQuickPick: { marginBottom: 12 },
+  quickPickLabel: { fontSize: 12, color: colors.muted, marginBottom: 6 },
+  quickPickRow: { flexDirection: 'row', gap: 6 },
+  quickPickChip: { backgroundColor: colors.sage, borderWidth: 1, borderColor: colors.sage, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+  quickPickChipText: { fontSize: 12, color: colors.ink, fontWeight: '500' },
 });

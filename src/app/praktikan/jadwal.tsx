@@ -1,89 +1,29 @@
-import React, { useMemo } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { PraktikanSessionCard } from '../../components/praktikan/PraktikanSessionCard';
 import { useAttendance } from '../../context/AttendanceContext';
 import { useAuth } from '../../context/AuthContext';
+import { SessionStatus } from '../../types/attendance';
+
+type Filter = 'all' | SessionStatus;
+const filters: { key: Filter; label: string }[] = [{ key: 'all', label: 'Semua' }, { key: 'open', label: 'Dibuka' }, { key: 'upcoming', label: 'Belum Dibuka' }, { key: 'closed', label: 'Ditutup' }];
 
 export default function PraktikanScheduleScreen() {
-  const router = useRouter();
-  const { authUser } = useAuth();
+  const router = useRouter(); const { authUser } = useAuth();
   const { sessions, sessionsLoading, attendanceError, getAttendanceForStudent } = useAttendance();
-
-  const recordsBySession = useMemo(() => {
-    if (!authUser) return new Set<string>();
-    return new Set(getAttendanceForStudent(authUser.uid).map((record) => record.sessionId));
-  }, [authUser, getAttendanceForStudent]);
-
-  if (!authUser || authUser.role !== 'praktikan') {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.state}>
-          <Text style={styles.title}>Akses praktikan diperlukan</Text>
-          <Text style={styles.description}>Masuk dengan akun praktikan untuk melihat jadwal Anda.</Text>
-          <Pressable style={styles.button} onPress={() => router.replace('/auth/login')}>
-            <Text style={styles.buttonText}>Ke halaman login</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.content}>
-        {sessionsLoading ? (
-          <View style={styles.state}>
-            <ActivityIndicator color="#2563EB" />
-            <Text style={styles.description}>Memuat jadwal praktikum...</Text>
-          </View>
-        ) : attendanceError ? (
-          <View style={styles.state}>
-            <Text style={styles.title}>Jadwal tidak dapat dimuat</Text>
-            <Text style={styles.description}>{attendanceError}</Text>
-            <Pressable style={styles.button} onPress={() => router.replace('/praktikan')}>
-              <Text style={styles.buttonText}>Kembali dan coba lagi</Text>
-            </Pressable>
-          </View>
-        ) : sessions.length === 0 ? (
-          <View style={styles.state}>
-            <Text style={styles.title}>Belum ada jadwal</Text>
-            <Text style={styles.description}>Anda belum terdaftar pada sesi praktikum mana pun.</Text>
-          </View>
-        ) : (
-          <View style={styles.list}>
-            <Text style={styles.heading}>Sesi Anda</Text>
-            {sessions.map((session) => (
-              <PraktikanSessionCard
-                key={session.id}
-                session={session}
-                footerNote={recordsBySession.has(session.id) ? 'Sudah presensi' : undefined}
-                onPress={() => router.push(`/praktikan/${session.id}`)}
-              />
-            ))}
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
-  );
+  const [filter, setFilter] = useState<Filter>('all');
+  const attended = useMemo(() => new Set(authUser ? getAttendanceForStudent(authUser.uid).map((record) => record.sessionId) : []), [authUser, getAttendanceForStudent]);
+  const shown = useMemo(() => filter === 'all' ? sessions : sessions.filter((item) => item.status === filter), [filter, sessions]);
+  if (!authUser || authUser.role !== 'praktikan') return <SafeAreaView style={styles.safe}><State title="Akses praktikan diperlukan" detail="Masuk dengan akun praktikan untuk melihat jadwal Anda." action="Ke halaman login" onPress={() => router.replace('/auth/login')} /></SafeAreaView>;
+  return <SafeAreaView style={styles.safe}><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <Text style={styles.title}>Jadwal Praktikum</Text><Text style={styles.subtitle}>Pantau jadwal dan status presensi Anda.</Text>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>{filters.map((item) => <Pressable key={item.key} onPress={() => setFilter(item.key)} style={[styles.filter, filter === item.key && styles.filterActive]}><Text style={[styles.filterText, filter === item.key && styles.filterTextActive]}>{item.label}</Text></Pressable>)}</ScrollView>
+    <Text style={styles.sectionTitle}>{filter === 'all' ? 'Semua sesi Anda' : `Sesi ${filters.find((item) => item.key === filter)?.label.toLowerCase()}`}</Text>
+    {sessionsLoading ? <State detail="Memuat jadwal praktikum..." /> : attendanceError ? <State title="Jadwal tidak dapat dimuat" detail={attendanceError} /> : shown.length === 0 ? <State title="Belum ada jadwal" detail="Anda belum terdaftar pada sesi untuk status ini." /> : shown.map((session) => <Pressable key={session.id} onPress={() => router.push(`/praktikan/${session.id}`)} style={styles.card}>
+      <Text style={styles.cardTitle}>{session.practicalName}</Text><Text style={styles.className}>Kelas {session.className}</Text><Text style={[styles.status, session.status === 'open' ? styles.open : session.status === 'closed' ? styles.closed : styles.upcoming]}>{session.status === 'open' ? 'DIBUKA' : session.status === 'closed' ? 'DITUTUP' : 'BELUM DIBUKA'}</Text><Text style={styles.line}>{session.date}</Text><Text style={styles.line}>{session.startTime}–{session.endTime} WIB{session.room ? ` · ${session.room}` : ''}</Text><Text style={styles.assistant}>Asisten: {session.assistantName ?? '-'}</Text><Text style={styles.attendance}>{attended.has(session.id) ? 'Sudah presensi' : session.status === 'open' ? 'Belum presensi' : 'Presensi belum tersedia.'}</Text>
+    </Pressable>)}</ScrollView><BottomNav router={router} /></SafeAreaView>;
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { flexGrow: 1, padding: 16 },
-  list: { width: '100%', maxWidth: 640, alignSelf: 'center' },
-  heading: { fontSize: 18, fontWeight: '700', color: '#0F172A', marginBottom: 12 },
-  state: { flex: 1, minHeight: 240, justifyContent: 'center', alignItems: 'center', gap: 10, padding: 24 },
-  title: { fontSize: 16, fontWeight: '700', color: '#0F172A', textAlign: 'center' },
-  description: { fontSize: 13, color: '#64748B', lineHeight: 19, textAlign: 'center' },
-  button: { backgroundColor: '#2563EB', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10, marginTop: 4 },
-  buttonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-});
+function State({ title, detail, action, onPress }: { title?: string; detail: string; action?: string; onPress?: () => void }) { return <View style={styles.state}>{title ? <Text style={styles.stateTitle}>{title}</Text> : <ActivityIndicator color="#232420" />}<Text style={styles.stateDetail}>{detail}</Text>{action && onPress ? <Pressable onPress={onPress} style={styles.retry}><Text style={styles.retryText}>{action}</Text></Pressable> : null}</View>; }
+function BottomNav({ router }: { router: ReturnType<typeof useRouter> }) { const items = [{ label: 'Beranda', icon: 'home-outline', path: '/praktikan' }, { label: 'Riwayat', icon: 'time-outline', path: '/praktikan/riwayat' }, { label: 'Peta', icon: 'map-outline', path: '/maps' }, { label: 'Izin', icon: 'document-text-outline', path: '/praktikan/izin' }] as const; return <View style={styles.nav}>{items.map((item) => <Pressable key={item.label} onPress={() => router.replace(item.path)} style={styles.navItem}><Ionicons name={item.icon} size={21} color="#232420"/><Text style={styles.navText}>{item.label}</Text></Pressable>)}</View>; }
+const styles = StyleSheet.create({ safe: { flex: 1, backgroundColor: '#F2F1ED' }, content: { padding: 24, paddingBottom: 106 }, title: { fontSize: 25, fontWeight: '500', color: '#232420' }, subtitle: { fontSize: 14, color: '#5E5F58', marginTop: 12, marginBottom: 18 }, filters: { gap: 8, paddingBottom: 18 }, filter: { backgroundColor: '#FFFFFF', borderRadius: 24, paddingHorizontal: 14, height: 44, justifyContent: 'center' }, filterActive: { backgroundColor: '#FFC332' }, filterText: { color: '#232420', fontSize: 12 }, filterTextActive: { fontWeight: '600' }, sectionTitle: { fontSize: 14, fontWeight: '600', color: '#5E5F58', marginBottom: 16 }, card: { backgroundColor: '#FFFFFF', borderRadius: 28, padding: 24, marginBottom: 16 }, cardTitle: { color: '#232420', fontSize: 18, fontWeight: '500' }, className: { color: '#5E5F58', fontSize: 13, marginTop: 12 }, status: { fontSize: 11, fontWeight: '700', marginTop: 12 }, open: { color: '#436D2B' }, closed: { color: '#A13B2B' }, upcoming: { color: '#875B18' }, line: { color: '#232420', fontSize: 14, marginTop: 10 }, assistant: { color: '#5E5F58', fontSize: 13, marginTop: 12 }, attendance: { color: '#5E5F58', fontSize: 13, fontWeight: '600', marginTop: 12 }, state: { minHeight: 200, justifyContent: 'center', alignItems: 'center', gap: 10, padding: 24, backgroundColor: '#FFFFFF', borderRadius: 28 }, stateTitle: { color: '#232420', fontSize: 17, fontWeight: '600' }, stateDetail: { color: '#5E5F58', fontSize: 13, textAlign: 'center', lineHeight: 19 }, retry: { backgroundColor: '#FFC332', borderRadius: 24, paddingHorizontal: 16, paddingVertical: 12, marginTop: 4 }, retryText: { color: '#232420', fontWeight: '600' }, nav: { height: 84, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 20, flexDirection: 'row', backgroundColor: '#F2F1ED' }, navItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3, borderRadius: 24 }, navText: { color: '#232420', fontSize: 10 } });

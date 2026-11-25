@@ -13,24 +13,24 @@ const STATUS_CONFIG: Record<
 > = {
   upcoming: {
     label: 'Belum Dibuka',
-    bg: '#FEF3C7',
-    text: '#92400E',
-    dot: '#F59E0B',
-    border: '#FDE68A',
+    bg: '#FFF1CE',
+    text: '#875B18',
+    dot: '#875B18',
+    border: '#FFF1CE',
   },
   open: {
     label: 'Dibuka',
-    bg: '#DCFCE7',
-    text: '#166534',
-    dot: '#22C55E',
-    border: '#BBF7D0',
+    bg: '#E3E7D8',
+    text: '#436D2B',
+    dot: '#436D2B',
+    border: '#E3E7D8',
   },
   closed: {
     label: 'Ditutup',
-    bg: '#F1F5F9',
-    text: '#475569',
-    dot: '#64748B',
-    border: '#E2E8F0',
+    bg: '#E7E5DF',
+    text: '#5E5F58',
+    dot: '#5E5F58',
+    border: '#E7E5DF',
   },
 };
 

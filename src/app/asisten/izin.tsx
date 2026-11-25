@@ -14,6 +14,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useAttendance } from '../../context/AttendanceContext';
 import { usePermissions } from '../../context/PermissionContext';
 import { PermissionStatus } from '../../types/attendance';
+import { colors } from '../../theme/tokens';
 
 type FilterStatus = 'all' | PermissionStatus;
 
@@ -284,240 +285,51 @@ export default function AsistenPermissionReviewScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  scrollContent: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  container: {
-    width: '100%',
-    maxWidth: 640,
-    gap: 14,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  guardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  primaryBtn: {
-    backgroundColor: '#2563EB',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  primaryBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  filterRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-  },
-  filterChipActive: {
-    backgroundColor: '#2563EB',
-    borderColor: '#2563EB',
-  },
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#475569',
-  },
-  filterChipTextActive: {
-    color: '#FFFFFF',
-  },
-  errorBox: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-  },
-  errorText: {
-    color: '#991B1B',
-    fontSize: 12,
-  },
-  feedbackBox: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-  },
-  feedbackText: {
-    color: '#1E3A8A',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 24,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  emptyTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 4,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: '#64748B',
-    textAlign: 'center',
-  },
-  list: {
-    gap: 12,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 10,
-  },
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  studentName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  sessionSub: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  statusBadge: {
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  statusPending: {
-    backgroundColor: '#FEF3C7',
-  },
-  statusApproved: {
-    backgroundColor: '#DCFCE7',
-  },
-  statusRejected: {
-    backgroundColor: '#FEE2E2',
-  },
-  statusBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  statusTextPending: {
-    color: '#92400E',
-  },
-  statusTextApproved: {
-    color: '#166534',
-  },
-  statusTextRejected: {
-    color: '#991B1B',
-  },
-  reasonBox: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  reasonLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#64748B',
-    marginBottom: 2,
-  },
-  reasonText: {
-    fontSize: 13,
-    color: '#0F172A',
-    lineHeight: 19,
-  },
-  aiBox: {
-    backgroundColor: '#EFF6FF',
-    borderRadius: 8,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-  },
-  aiLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#1E40AF',
-  },
-  aiValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1D4ED8',
-    marginTop: 2,
-  },
-  reviewSection: {
-    gap: 8,
-    marginTop: 2,
-  },
-  noteInput: {
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 13,
-    color: '#0F172A',
-    backgroundColor: '#F8FAFC',
-  },
-  decisionRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  decisionBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  approveBtn: {
-    backgroundColor: '#16A34A',
-  },
-  rejectBtn: {
-    backgroundColor: '#DC2626',
-  },
-  decisionBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  reviewedMeta: {
-    borderTopWidth: 1,
-    borderColor: '#F1F5F9',
-    paddingTop: 8,
-  },
-  reviewedMetaText: {
-    fontSize: 12,
-    color: '#64748B',
-  },
+  safeArea: { flex: 1, backgroundColor: colors.canvas },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32, alignItems: 'center' },
+  container: { width: '100%', maxWidth: 640, gap: 16 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 12 },
+  guardTitle: { fontSize: 16, fontWeight: '700', color: colors.ink },
+  primaryBtn: { backgroundColor: colors.yellow, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 999 },
+  primaryBtnText: { color: colors.ink, fontSize: 13, fontWeight: '700' },
+  filterRow: { flexDirection: 'row', gap: 8 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+  filterChipActive: { backgroundColor: colors.yellow, borderColor: colors.yellow },
+  filterChipText: { fontSize: 13, fontWeight: '600', color: colors.muted },
+  filterChipTextActive: { color: colors.ink },
+  errorBox: { backgroundColor: colors.rose, borderColor: colors.rose, borderWidth: 1, borderRadius: 20, padding: 12 },
+  errorText: { color: colors.ink, fontSize: 12 },
+  feedbackBox: { backgroundColor: colors.success, borderColor: colors.success, borderWidth: 1, borderRadius: 20, padding: 12 },
+  feedbackText: { color: colors.successInk, fontSize: 13, fontWeight: '600' },
+  emptyCard: { backgroundColor: colors.card, borderRadius: 28, padding: 24, alignItems: 'center' },
+  emptyTitle: { fontSize: 15, fontWeight: '700', color: colors.ink, marginBottom: 4 },
+  emptyText: { fontSize: 13, color: colors.muted, textAlign: 'center' },
+  list: { gap: 12 },
+  card: { backgroundColor: colors.card, borderRadius: 28, padding: 20, gap: 10 },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 },
+  studentName: { fontSize: 15, fontWeight: '700', color: colors.ink },
+  sessionSub: { fontSize: 12, color: colors.muted, marginTop: 2 },
+  statusBadge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999 },
+  statusPending: { backgroundColor: colors.yellowSoft },
+  statusApproved: { backgroundColor: colors.success },
+  statusRejected: { backgroundColor: colors.rose },
+  statusBadgeText: { fontSize: 11, fontWeight: '700' },
+  statusTextPending: { color: colors.ink },
+  statusTextApproved: { color: colors.successInk },
+  statusTextRejected: { color: colors.danger },
+  reasonBox: { backgroundColor: colors.canvas, borderRadius: 20, padding: 10 },
+  reasonLabel: { fontSize: 11, fontWeight: '600', color: colors.muted, marginBottom: 2 },
+  reasonText: { fontSize: 13, color: colors.ink, lineHeight: 19 },
+  aiBox: { backgroundColor: colors.lavender, borderRadius: 20, padding: 10 },
+  aiLabel: { fontSize: 11, fontWeight: '600', color: colors.ink },
+  aiValue: { fontSize: 13, fontWeight: '700', color: colors.ink, marginTop: 2 },
+  reviewSection: { gap: 8, marginTop: 2 },
+  noteInput: { borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingHorizontal: 10, paddingVertical: 8, fontSize: 13, color: colors.ink, backgroundColor: colors.canvas },
+  decisionRow: { flexDirection: 'row', gap: 10 },
+  decisionBtn: { flex: 1, paddingVertical: 12, borderRadius: 999, alignItems: 'center' },
+  approveBtn: { backgroundColor: colors.successInk },
+  rejectBtn: { backgroundColor: colors.danger },
+  decisionBtnText: { color: colors.card, fontSize: 13, fontWeight: '700' },
+  reviewedMeta: { borderTopWidth: 1, borderColor: colors.canvas, paddingTop: 8 },
+  reviewedMetaText: { fontSize: 12, color: colors.muted },
 });

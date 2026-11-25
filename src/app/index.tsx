@@ -31,9 +31,8 @@ export default function AuthGateScreen() {
         <View style={styles.landing}>
           <Image source={require('../../assets/landing-campus.png')} style={styles.background} />
           <View style={styles.overlay} />
-          <View style={styles.brandLockup}>
-            <Text style={styles.brand}>DIPLabs</Text>
-            <Text style={styles.brandCaption}>PRACTICUM ATTENDANCE</Text>
+          <View style={styles.logoPanel}>
+            <Image source={require('../../assets/diplabs-logo.svg')} resizeMode="contain" style={styles.logo} />
           </View>
         </View>
       ) : <View style={styles.center} />}
@@ -55,31 +54,23 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     width: undefined,
     height: undefined,
-    opacity: 0.08,
+    opacity: 0.12,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#F2F1ED',
-    opacity: 0.76,
+    opacity: 0.80,
   },
-  brandLockup: {
-    flex: 1,
-    justifyContent: 'center',
+  logoPanel: {
+    position: 'absolute',
+    top: '27.5%',
+    left: 0,
+    right: 0,
+    height: 411,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  brand: {
-    color: '#232420',
-    fontSize: 48,
-    fontWeight: '800',
-    letterSpacing: -2,
-  },
-  brandCaption: {
-    color: '#5E5F58',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 2,
-    marginTop: 8,
-  },
+  logo: { width: 280, height: 231 },
   center: {
     flex: 1,
     justifyContent: 'center',
