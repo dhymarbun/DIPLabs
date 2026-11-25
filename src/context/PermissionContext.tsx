@@ -48,6 +48,8 @@ export function PermissionProvider({
 
     setPermissionsLoading(true);
     setPermissionsError(null);
+    // Prevent permission requests from a previous account flashing on screen.
+    setPermissions([]);
 
     const baseCollection = collection(db, 'permissionRequests');
     const q =

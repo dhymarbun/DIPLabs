@@ -68,11 +68,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         unsubscribeProfile = null;
       }
 
+      // Do not retain the previous profile while Firebase resolves a changed
+      // account. Role checks must never run against stale identity data.
+      setAuthUser(null);
+
       if (!firebaseUser) {
-        setAuthUser(null);
         setAuthLoading(false);
         return;
       }
+
+      setAuthLoading(true);
 
       const userDocRef = doc(db, 'users', firebaseUser.uid);
       unsubscribeProfile = onSnapshot(
@@ -92,11 +97,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
           } else {
             setAuthUser(null);
+            void signOut(auth).catch(() => undefined);
           }
           setAuthLoading(false);
         },
         () => {
+          // An account without a readable profile is not authorized in DIPLabs.
+          setAuthUser(null);
           setAuthLoading(false);
+          void signOut(auth).catch(() => undefined);
         }
       );
     });
