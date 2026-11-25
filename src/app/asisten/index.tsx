@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Image,
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -108,7 +109,10 @@ export default function AsistenScheduleScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.container}>
-          <Text style={styles.pageTitle}>Dashboard Asisten</Text>
+          <View style={styles.brandHeader}>
+            <Image source={require('../../../assets/diplabs-logo.png')} resizeMode="contain" style={styles.headerLogo} accessibilityLabel="Logo DIPLabs" />
+            <Text style={styles.pageTitle}>Dashboard Asisten</Text>
+          </View>
           {/* User Header */}
           <View style={styles.profileRow}>
             <View style={{ flex: 1 }}>
@@ -289,6 +293,8 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 15, fontWeight: '700', color: colors.ink, marginBottom: 4 },
   emptySubtitle: { fontSize: 13, color: colors.muted, textAlign: 'center' },
   pageTitle: { color: colors.ink, fontSize: 32, lineHeight: 38, fontWeight: '500' },
+  brandHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerLogo: { width: 42, height: 36 },
   seedBtn: { marginTop: 14, backgroundColor: colors.sage, borderColor: colors.sage, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999 },
   seedBtnText: { color: colors.ink, fontSize: 13, fontWeight: '700' },
 });

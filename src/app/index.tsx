@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Image, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Image, ImageBackground, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
+import { colors } from '../theme/tokens';
 
 export default function AuthGateScreen() {
   const router = useRouter();
@@ -27,14 +28,23 @@ export default function AuthGateScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {showLanding || authLoading ? (
-        <View style={styles.landing}>
-          <Image source={require('../../assets/landing-campus.png')} style={styles.background} />
+      {showLanding ? (
+        <ImageBackground
+          source={require('../../assets/landing-campus.png')}
+          style={styles.landing}
+          imageStyle={styles.backgroundImage}
+          resizeMode="cover"
+        >
           <View style={styles.overlay} />
-          <View style={styles.logoPanel}>
-            <Image source={require('../../assets/diplabs-logo.svg')} resizeMode="contain" style={styles.logo} />
+          <View style={styles.content}>
+            <Image
+              source={require('../../assets/diplabs-logo.png')}
+              resizeMode="contain"
+              style={styles.logo}
+              accessibilityLabel="Logo DIPLabs"
+            />
           </View>
-        </View>
+        </ImageBackground>
       ) : <View style={styles.center} />}
     </SafeAreaView>
   );
@@ -43,34 +53,28 @@ export default function AuthGateScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F2F1ED',
+    backgroundColor: colors.canvas,
   },
   landing: {
     flex: 1,
     overflow: 'hidden',
-    backgroundColor: '#F2F1ED',
+    backgroundColor: colors.canvas,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
-  background: {
-    ...StyleSheet.absoluteFillObject,
-    width: undefined,
-    height: undefined,
-    opacity: 0.12,
-  },
+  backgroundImage: { opacity: 0.22 },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#F2F1ED',
-    opacity: 0.80,
+    backgroundColor: 'rgba(255, 255, 255, 0.73)',
   },
-  logoPanel: {
-    position: 'absolute',
-    top: '27.5%',
-    left: 0,
-    right: 0,
-    height: 411,
-    alignItems: 'center',
+  content: {
+    flex: 1,
+    paddingHorizontal: 32,
+    paddingVertical: 36,
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  logo: { width: 280, height: 231 },
+  logo: { width: '78%', maxWidth: 285, height: 235 },
   center: {
     flex: 1,
     justifyContent: 'center',

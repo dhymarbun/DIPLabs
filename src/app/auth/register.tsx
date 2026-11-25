@@ -91,7 +91,7 @@ export default function RegisterScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.container}>
-          <View style={styles.brandPanel}><Image source={require('../../../assets/diplabs-logo.svg')} resizeMode="contain" style={styles.logo}/><Text style={styles.brand}>DIPLabs</Text></View>
+          <View style={styles.brandPanel}><Image source={require('../../../assets/diplabs-logo.png')} resizeMode="contain" style={styles.logo}/><Text style={styles.brand}>DIPLabs</Text></View>
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Buat Akun Praktikan</Text>
             <Text style={styles.intro}>Daftar menggunakan identitas mahasiswa Anda.</Text>

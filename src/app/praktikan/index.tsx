@@ -7,12 +7,25 @@ import {
   Text,
   View,
   Alert,
+  Image,
+  ImageSourcePropType,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRouter } from 'expo-router';
 import { PraktikanSessionCard } from '../../components/praktikan/PraktikanSessionCard';
 import { useAttendance } from '../../context/AttendanceContext';
 import { useAuth } from '../../context/AuthContext';
+
+const dashboardIcons = {
+  calendarCard: require('../../../assets/icons/calendar-card.png'),
+  calendarBanner: require('../../../assets/icons/calendar-banner.png'),
+  mapCard: require('../../../assets/icons/map-card.png'),
+  fileCard: require('../../../assets/icons/file-card.png'),
+  historyCard: require('../../../assets/icons/history-card.png'),
+  homeNav: require('../../../assets/icons/home-active.png'),
+  historyNav: require('../../../assets/icons/history-nav.png'),
+  mapNav: require('../../../assets/icons/map-nav.png'),
+  fileNav: require('../../../assets/icons/file-nav.png'),
+} satisfies Record<string, ImageSourcePropType>;
 
 export default function PraktikanScheduleScreen() {
   const router = useRouter();
@@ -107,9 +120,9 @@ export default function PraktikanScheduleScreen() {
   const go = (path: '/praktikan' | '/praktikan/jadwal' | '/praktikan/riwayat' | '/maps' | '/praktikan/izin') => {
     if (path !== '/praktikan') router.push(path);
   };
-  const feature = (title: string, description: string, color: string, icon: keyof typeof Ionicons.glyphMap, path: Parameters<typeof go>[0]) => (
+  const feature = (title: string, description: string, color: string, icon: ImageSourcePropType, path: Parameters<typeof go>[0]) => (
     <Pressable onPress={() => go(path)} style={({ pressed }) => [styles.featureCard, { backgroundColor: color }, pressed && styles.pressed]}>
-      <Ionicons name={icon} size={28} color="#232420" />
+      <Image source={icon} resizeMode="contain" style={styles.featureIcon} accessibilityLabel={`${title} icon`} />
       <Text style={styles.featureTitle}>{title}</Text>
       <Text style={styles.featureDescription}>{description}</Text>
     </Pressable>
@@ -120,7 +133,10 @@ export default function PraktikanScheduleScreen() {
       <View style={styles.appShell}>
         <ScrollView contentContainerStyle={styles.dashboardContent} showsVerticalScrollIndicator={false}>
           <View style={styles.dashboardHeader}>
-            <Text style={styles.greeting}>Selamat Pagi,{`\n`}{currentUser.name.split(' ')[0]}!</Text>
+            <View style={styles.brandGreeting}>
+              <Image source={require('../../../assets/diplabs-logo.png')} resizeMode="contain" style={styles.headerLogo} accessibilityLabel="Logo DIPLabs" />
+              <Text style={styles.greeting}>Selamat Pagi,{`\n`}{currentUser.name.split(' ')[0]}!</Text>
+            </View>
             <Pressable
               onPress={handleLogout}
               disabled={loggingOut}
@@ -131,18 +147,18 @@ export default function PraktikanScheduleScreen() {
           </View>
           <Pressable style={({ pressed }) => [styles.todayBanner, pressed && styles.pressed]} onPress={() => todaySession && router.push(`/praktikan/${todaySession.id}`)}>
             <View style={styles.flexOne}><Text style={styles.todayTitle}>Praktikum Hari Ini</Text><Text style={styles.todaySummary}>{todaySession ? `${todaySession.practicalName} · ${todaySession.startTime} WIB` : 'Tidak ada jadwal hari ini'}</Text></View>
-            <Ionicons name="calendar-outline" size={28} color="#232420" />
+            <Image source={dashboardIcons.calendarBanner} resizeMode="contain" style={styles.featureIcon} accessibilityLabel="Kalender" />
           </Pressable>
           <View style={styles.featureGrid}>
-            {feature('Jadwal Praktikum', 'Lihat seluruh jadwal dan sesi mendatang.', '#FFE4A1', 'calendar-outline', '/praktikan/jadwal')}
-            {feature('Peta Laboratorium', 'Temukan lokasi dan informasi laboratorium.', '#E3E7D8', 'map-outline', '/maps')}
-            {feature('Pengajuan Izin', 'Ajukan izin ketidakhadiran praktikum.', '#F1D3CC', 'document-text-outline', '/praktikan/izin')}
-            {feature('Riwayat Presensi', 'Pantau catatan kehadiran Anda.', '#E1D9FA', 'time-outline', '/praktikan/riwayat')}
+            {feature('Jadwal Praktikum', 'Lihat seluruh jadwal dan sesi mendatang.', '#FFE4A1', dashboardIcons.calendarCard, '/praktikan/jadwal')}
+            {feature('Peta Laboratorium', 'Temukan lokasi dan informasi laboratorium.', '#E3E7D8', dashboardIcons.mapCard, '/maps')}
+            {feature('Pengajuan Izin', 'Ajukan izin ketidakhadiran praktikum.', '#F1D3CC', dashboardIcons.fileCard, '/praktikan/izin')}
+            {feature('Riwayat Presensi', 'Pantau catatan kehadiran Anda.', '#E1D9FA', dashboardIcons.historyCard, '/praktikan/riwayat')}
           </View>
           {(sessionsLoading || attendanceError || filteredSessions.length > 0) && <View style={styles.scheduleHint}><Text style={styles.scheduleHintTitle}>{sessionsLoading ? 'Memuat jadwal...' : attendanceError ? 'Jadwal tidak dapat dimuat' : `${filteredSessions.length} sesi tersedia`}</Text>{attendanceError ? <Text style={styles.scheduleHintText}>{attendanceError}</Text> : null}</View>}
         </ScrollView>
         <View style={styles.bottomNav}>
-          {([['Beranda', 'home-outline', '/praktikan'], ['Riwayat', 'time-outline', '/praktikan/riwayat'], ['Peta', 'map-outline', '/maps'], ['Izin', 'document-text-outline', '/praktikan/izin']] as const).map(([label, icon, path]) => <Pressable key={label} onPress={() => go(path)} style={({ pressed }) => [styles.navItem, path === '/praktikan' && styles.navActive, pressed && styles.pressed]}><Ionicons name={icon} size={22} color={path === '/praktikan' ? '#232420' : '#5E5F58'} /><Text style={[styles.navLabel, path === '/praktikan' && styles.navLabelActive]}>{label}</Text></Pressable>)}
+          {([['Beranda', dashboardIcons.homeNav, '/praktikan'], ['Riwayat', dashboardIcons.historyNav, '/praktikan/riwayat'], ['Peta', dashboardIcons.mapNav, '/maps'], ['Izin', dashboardIcons.fileNav, '/praktikan/izin']] as const).map(([label, icon, path]) => <Pressable key={label} onPress={() => go(path)} style={({ pressed }) => [styles.navItem, path === '/praktikan' && styles.navActive, pressed && styles.pressed]}><Image source={icon} resizeMode="contain" style={styles.navIcon} accessibilityLabel={`${label} icon`} /><Text style={[styles.navLabel, path === '/praktikan' && styles.navLabelActive]}>{label}</Text></Pressable>)}
         </View>
       </View>
     </SafeAreaView>
@@ -157,12 +173,15 @@ const styles = StyleSheet.create({
   appShell: { flex: 1, backgroundColor: '#F2F1ED', borderRadius: 32, overflow: 'hidden' },
   dashboardContent: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32, gap: 24 },
   dashboardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
+  brandGreeting: { flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  headerLogo: { width: 42, height: 36, marginTop: 2 },
   flexOne: { flex: 1 },
   todayBanner: { minHeight: 112, padding: 16, borderRadius: 28, backgroundColor: '#FFC332', flexDirection: 'row', alignItems: 'center', gap: 12 },
   todayTitle: { color: '#232420', fontSize: 18, lineHeight: 26, fontWeight: '500' },
   todaySummary: { color: '#232420', fontSize: 13, lineHeight: 19, marginTop: 8 },
   featureGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
   featureCard: { width: '47.5%', minHeight: 204, padding: 16, borderRadius: 28, gap: 12 },
+  featureIcon: { width: 28, height: 28 },
   featureTitle: { color: '#232420', fontSize: 17, lineHeight: 24, fontWeight: '500' },
   featureDescription: { color: '#232420', fontSize: 13, lineHeight: 19 },
   scheduleHint: { padding: 16, borderRadius: 16, backgroundColor: '#FFFFFF' },
@@ -170,6 +189,7 @@ const styles = StyleSheet.create({
   scheduleHintText: { color: '#5E5F58', marginTop: 4, fontSize: 13 },
   bottomNav: { height: 84, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 24, flexDirection: 'row', gap: 4, backgroundColor: '#F2F1ED' },
   navItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 999, padding: 4 },
+  navIcon: { width: 22, height: 22 },
   navActive: { backgroundColor: '#FFE4A1' },
   navLabel: { color: '#5E5F58', fontSize: 11, lineHeight: 16 },
   navLabelActive: { color: '#232420', fontWeight: '600' },
