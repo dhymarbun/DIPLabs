@@ -62,7 +62,7 @@ export default function LoginScreen() {
         <View style={styles.container}>
           <View style={styles.brandPanel}>
             <Image
-              source={require('../../../assets/diplabs-logo.svg')}
+              source={require('../../../assets/diplabs-logo.png')}
               resizeMode="contain"
               style={styles.logo}
             />
