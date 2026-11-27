@@ -708,3 +708,261 @@ export type LocationCheckResult =
 ## Definisi selesai sprint
 
 Sprint 3 dianggap selesai jika ketiga alur demo wajib (presensi berbasis lokasi pada halaman khusus presensi, peta laboratorium interaktif beserta informasi aktivitas praktikum real-time, dan push notification untuk pembukaan sesi/perubahan jadwal/keputusan izin) berjalan secara end-to-end menggunakan data Cloud Firestore dan sensor perangkat nyata (tanpa dummy data), seluruh kondisi izin perangkat dan error ditangani dengan jelas, presensi di luar radius dan presensi ganda dicegah, serta tidak ada konflik kepemilikan file antara Agent 1 dan Agent 2.
+
+# PERTEMUAN 4: Manajemen Laboratorium, Denda, Pembayaran Midtrans, dan Finalisasi UI
+
+## Tujuan sprint
+
+Sprint 4 menyempurnakan pengelolaan laboratorium dan kegiatan praktikum, menambahkan role **aslab**, memisahkan kewenangan **asprak**, menghitung keterlambatan dan denda secara konsisten, serta menyediakan pembayaran denda melalui Midtrans Sandbox. Seluruh layar mengikuti design system DIPLabs yang sudah ada: canvas warm, card putih, aksen kuning/sage/rose/lavender, radius besar, dan state loading/error/empty yang jelas.
+
+Semua data Sprint 4 harus memakai Firebase yang persisten dan real-time. Jangan mengganti data dengan mock data untuk membuat demo terlihat berjalan.
+
+## Aturan non-blocking yang wajib
+
+1. Semua agent membuat branch langsung dari commit `main`/`origin/main` terbaru yang sama. Tidak ada agent yang menunggu commit, kontrak, atau cherry-pick agent lain sebelum mulai.
+2. Kontrak Sprint 4 di dokumen ini frozen sejak awal sprint. Agent boleh membuat adapter/mock boundary lokal untuk typecheck, tetapi tidak boleh mengubah nama field, status, atau endpoint yang disepakati.
+3. Agent tidak boleh mengedit file milik agent lain. Integrasi dilakukan melalui skema Firestore dan HTTP contract, bukan import silang ke file yang belum tersedia.
+4. Jika membutuhkan field baru, gunakan field opsional yang sudah ditentukan di kontrak. Perubahan kontrak dicatat sebagai permintaan tertulis dan tidak boleh memblokir pekerjaan agent lain.
+5. Tidak ada pekerjaan “Agent 1 harus selesai dulu”. Setiap agent menyelesaikan UI dengan fallback loading/error untuk service yang belum tersedia, lalu service dihubungkan saat merge tanpa mengubah alur layar.
+6. Setiap agent menjalankan `npm.cmd run typecheck` di branch-nya. Backend wajib menjalankan test yang relevan.
+7. Sebelum merge, setiap agent memeriksa `git status --short`, `git diff --check`, dan memastikan hanya file dalam kepemilikannya yang berubah. Branch dapat di-merge dalam urutan apa pun.
+8. Midtrans Server Key, Firebase Admin credential, webhook secret, dan token pembayaran tidak boleh disimpan di React Native, bundle client, atau file yang dikomit.
+
+## Role dan kewenangan
+
+```ts
+export type UserRole = 'praktikan' | 'asprak' | 'aslab';
+```
+
+- **Praktikan**: melihat jadwal, presensi, izin, tagihan, pembayaran, dan riwayat pembayaran miliknya sendiri.
+- **Asprak**: hanya mengelola sesi/kelas/laboratorium yang ditugaskan: membuka sesi, memantau presensi, memutuskan izin, dan menutup sesi. Asprak tidak boleh mengelola distribusi praktikan, bulk insert, daftar asprak, atau konfigurasi seluruh laboratorium.
+- **Aslab**: mengelola laboratorium yang menjadi tanggung jawabnya, distribusi praktikan dan asprak, cakupan lokasi presensi, grace period, nominal denda, dashboard keberlangsungan, dan riwayat keuangan. Aslab tidak mengambil alih tindakan sesi asprak kecuali assignment memberi hak tersebut.
+
+Akun lama `asisten` tidak boleh dihapus atau diubah secara destruktif. Sediakan mapping kompatibilitas di auth boundary menuju `asprak` atau prosedur migrasi admin yang terdokumentasi.
+
+## Kontrak data Sprint 4
+
+```ts
+export type Laboratory = {
+  id: string;
+  name: string;
+  courseId: string;
+  courseName: string;
+  location?: string;
+  room?: string;
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+  lateGraceMinutes: number;
+  lateFeeAmount: number;
+  managedByAslabIds: string[];
+  asprakIds: string[];
+  participantIds: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type LaboratoryAssignment = {
+  id: string;
+  laboratoryId: string;
+  userId: string;
+  role: 'praktikan' | 'asprak';
+  status: 'pending' | 'accepted' | 'rejected';
+  source: 'single' | 'bulk';
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AttendanceTiming = 'on-time' | 'late';
+
+export type FineInvoiceStatus = 'unpaid' | 'pending' | 'paid' | 'failed' | 'waived';
+export type PaymentStatus = 'pending' | 'success' | 'failed';
+
+export type FineInvoice = {
+  id: string;
+  studentId: string;
+  sessionId: string;
+  attendanceKey: string;
+  amount: number;
+  currency: 'IDR';
+  reason: 'late';
+  lateMinutes: number;
+  status: FineInvoiceStatus;
+  createdAt: string;
+  dueAt?: string;
+  paidAt?: string;
+  latestTransactionId?: string;
+};
+
+export type PaymentTransaction = {
+  id: string;
+  invoiceId: string;
+  studentId: string;
+  provider: 'midtrans';
+  environment: 'sandbox';
+  orderId: string;
+  amount: number;
+  status: PaymentStatus;
+  transactionTime?: string;
+  verifiedAt?: string;
+  failureReason?: string;
+};
+```
+
+Rules:
+
+- `checkedInAt <= sessionStart + lateGraceMinutes` is `on-time`; after that is `late`.
+- Final timing and fee are calculated server-side. The client may show a preview only.
+- Approved permission creates/marks an `excused` absence and never changes attendance to `present`.
+- Excused absence does not create a late-fee invoice.
+- The unique late-event key is `sessionId_studentId`; one late event creates at most one invoice.
+- Payment never changes attendance status.
+
+### Firestore collections
+
+- `laboratories/{laboratoryId}` — course, location, coordinates, radius, grace period, fee, and manager IDs.
+- `laboratoryAssignments/{assignmentId}` — praktikan/asprak assignment and review status.
+- `bulkImportJobs/{jobId}` — import type, uploader, raw/normalized rows, accepted/rejected rows, errors, and status.
+- `sessions/{sessionId}` — existing session data plus `laboratoryId` and `courseId`.
+- `attendance/{sessionId}_{studentId}` — attendance plus calculated timing fields.
+- `permissionRequests/{requestId}` — existing permission data and excused-absence outcome.
+- `fineInvoices/{invoiceId}` — one invoice per late event.
+- `paymentTransactions/{transactionId}` — Midtrans transaction and verified status.
+- `notifications/{notificationId}` — existing notifications extended with `invoiceId` and payment event type.
+
+Firestore writes must be idempotent for attendance, invoice creation, and webhook processing. Server-only verification fields must not be writable by clients.
+
+## Payment Gateway contract
+
+The client calls the backend; only the backend calls Midtrans Sandbox:
+
+```text
+POST /api/payments/midtrans/create
+body: { invoiceId: string }
+response: { transactionId: string; orderId: string; redirectUrl?: string; token?: string; status: 'pending' }
+
+GET /api/payments/:transactionId
+response: PaymentTransaction
+
+POST /api/payments/midtrans/webhook
+body: Midtrans notification payload
+response: { received: true }
+```
+
+The backend validates auth, invoice ownership, amount, and invoice status. It keeps the Midtrans Server Key/webhook secret private, verifies webhook signatures/status, and transactionally updates payment and invoice documents. Client callbacks and polling may display `pending`, `success`, or `failed`, but cannot promote a transaction to `success`.
+
+Midtrans setup reference: create and verify an account, switch the dashboard Environment to **Sandbox**, use Sandbox credentials only on the backend, and follow the official documentation at `https://docs.midtrans.com/`. Never commit credentials or account screenshots containing secrets.
+
+## Bulk insert behavior
+
+These are three separate flows, not one combined bulk operation:
+
+1. Bulk/single laboratory creation by course.
+2. Bulk/single praktikan assignment to a laboratory.
+3. Bulk/single asprak assignment to a laboratory.
+
+Each flow must provide its own downloadable CSV/XLSX template, validate each row independently, show a scrollable preview, allow aslab to accept/deny/edit/complete each row, preserve row status, report committed/rejected rows, and safely retry rejected rows without duplicating accepted records. Do not migrate schedules; only praktikan and asprak distribution may move.
+
+## Parallel ownership
+
+All agents start together from the same latest commit and use the frozen contracts above.
+
+### Agent 1 — Backend, shared domain, and security
+
+Own only:
+
+- `src/types/sprint4.ts`
+- `src/services/sprint4/**`
+- `src/context/BillingContext.tsx`
+- `src/context/LaboratoryManagementContext.tsx`
+- `server/**` or the separately deployed Midtrans backend
+- `firestore.rules`
+- `firestore.indexes.json`
+- `functions/**` when Firebase Cloud Functions are used
+
+Implement role-aware data, Firestore listeners/writes, idempotent late-fee generation, permission-to-excused-absence behavior, bulk normalization/validation, downloadable template service contract, Midtrans Sandbox flow, webhook verification, notifications, security rules, and the shared data/API contracts needed by the UI. Do not edit application screens or UI tokens owned by Agent 2.
+
+### Agent 2 — All application UI and role workflows
+
+Own only:
+
+- `src/app/auth/**`
+- `src/app/aslab/**`
+- `src/app/asprak/**`
+- `src/app/praktikan/tagihan.tsx`
+- `src/app/praktikan/pembayaran/**`
+- `src/app/praktikan/pembayaran-riwayat.tsx`
+- `src/components/shared/**`
+- `src/components/aslab/**`
+- `src/components/asprak/**`
+- `src/components/praktikan/billing/**`
+- `src/theme/**`
+
+Build all application-facing workflows in parallel within this ownership: role-aware auth presentation, Aslab laboratory CRUD/dashboard/imports, Asprak assigned-session operations, Praktikan invoice/payment/history screens, shared UI components, and final visual consistency. Use Agent 1's frozen contracts and fallback states; do not wait for backend implementation. Do not edit Agent 1's contexts, services, types, server, functions, or rules.
+
+Agent 2 may split its own work internally into parallel subtasks, but all subtasks remain under Agent 2 ownership and must not create overlapping edits.
+
+## Navigation
+
+- `/` — auth gate/landing.
+- `/auth/login`, `/auth/register` — authentication and role-aware account setup.
+- `/aslab` — Aslab dashboard.
+- `/aslab/laboratorium` — laboratory CRUD, assignments, and bulk imports.
+- `/aslab/dashboard` — operational and financial dashboard with day/week/month filters.
+- `/asprak` — assigned sessions and attendance operations.
+- `/asprak/[sessionId]` — open/monitor/close session and permission review.
+- `/praktikan` — existing practical dashboard.
+- `/praktikan/tagihan` — unpaid/pending/paid/failed invoices.
+- `/praktikan/pembayaran/[invoiceId]` — payment detail and Midtrans handoff.
+- `/praktikan/pembayaran-riwayat` — persistent payment history.
+
+Role guards must be enforced in navigation, Firestore Rules, and backend authorization. A hidden button is not an authorization boundary.
+
+## Aslab dashboard requirements
+
+Use Firebase data and day/week/month filters for laboratory count, participant count, active/upcoming status per laboratory, location/schedule, activity history, and fine/payment financial history including pending, paid, failed, and waived totals. Use one documented timezone consistently for session, grace-period, and payment timestamps.
+
+## Sprint 4 acceptance checklist
+
+### Aslab
+
+- [ ] CRUD laboratory includes course, location, coordinates, radius, grace period, and fixed late fee.
+- [ ] Three independent single/bulk insert flows exist: laboratories, praktikan assignments, asprak assignments.
+- [ ] Every bulk flow has its own downloadable template, scrollable row preview, per-row accept/deny/edit/completion, validation, and safe retry.
+- [ ] Praktikan/asprak can be moved between laboratories without changing schedules.
+- [ ] Dashboard shows live operational and financial data with day/week/month filters.
+
+### Asprak
+
+- [ ] Sees only assigned classes, laboratories, and sessions.
+- [ ] Can open, monitor, and close assigned sessions in real time.
+- [ ] Can review permissions without changing approved absence into attendance.
+- [ ] Cannot manage global laboratory configuration or distribution.
+
+### Denda and payment
+
+- [ ] Server-side late timing uses session start plus configurable grace period.
+- [ ] On-time, late, and excused absence states are distinct.
+- [ ] One late event creates at most one invoice linked to student, session, and attendance.
+- [ ] Midtrans Sandbox uses client–backend–gateway flow with no secret in the app.
+- [ ] Webhook verification, idempotency, pending/success/failed states, and persistent history work.
+- [ ] Payment status never changes attendance status.
+- [ ] Notifications cover new invoice, successful payment, failed payment, and required follow-up.
+
+### Quality and integration
+
+- [ ] Loading, empty, error, unauthorized, disabled, and retry states are handled.
+- [ ] No agent changed another agent's owned files.
+- [ ] Each agent ran `npm.cmd run typecheck`; backend/webhook signature tests also ran where applicable.
+- [ ] Security Rules and backend authorization cover roles, invoice ownership, duplicate invoices, and webhook replay.
+- [ ] Manual demo covers Aslab management/import, Asprak session operations, late attendance, excused absence, invoice creation, Sandbox payment, webhook verification, notifications, and persistent payment history.
+
+## Latest pull UI/UX review baseline
+
+Latest observed commit: `189f63b` (`Merge remote-tracking branch 'origin/ui-only'`), including `5bc70ac` (`fix: logo ilang`). Verify these concrete issues against the running app before accepting UI work:
+
+- `src/app/index.tsx` still uses a timed landing transition. If Firebase loading lasts longer than the timer, the route can briefly show a blank center view before redirecting; replace it with an explicit loading state when touching the auth gate.
+- The latest pull uses raster `assets/diplabs-logo.png` on landing/dashboards while older auth screens may still reference the SVG logo. Check scale, clipping, and branding consistency on Android.
+- `_layout.tsx` gives the Asisten dashboard the stack title `Jadwal Praktikum`, while the screen displays `Dashboard Asisten`; verify the duplicate/mismatched title when headers are visible.
+- Several screens still use legacy blue/slate colors such as `#2563EB` and `#F8FAFC` while the warm token system is used elsewhere; this is a visual consistency issue.
+- No device/emulator visual QA was established by the latest pull. Do not mark UI acceptance complete from typecheck alone.
