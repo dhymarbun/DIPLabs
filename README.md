@@ -357,3 +357,74 @@ Sprint ini melanjutkan penggunaan data dinamis secara penuh di Cloud Firestore t
 - **Validasi Lokasi Wajib dalam Proses Presensi**: Pemeriksaan radius lokasi bukan sekadar indikator visual di UI, melainkan bagian dari fungsi pencatatan presensi (`recordAttendance`). Presensi yang tidak memenuhi syarat status sesi (`open`), keunikan kehadiran, atau radius lokasi tidak akan dicatat ke Firestore.
 - **Penanganan Kondisi Perangkat**: Menangani dan menampilkan pesan informatif saat izin lokasi/notifikasi ditolak pengguna, GPS/layanan lokasi perangkat mati, sinyal lokasi belum tersedia, koneksi internet terputus, atau token notifikasi gagal diperoleh.
 - **Firebase Security Rules**: Hanya asisten yang berhak menambah, mengubah, atau menghapus data lokasi laboratorium (`laboratories/{labId}`), sedangkan praktikan hanya memiliki akses baca dan hanya dapat mencatat presensi miliknya sendiri ketika sesi terbuka.
+
+# PERTEMUAN 4
+
+Sprint 4 berfokus pada manajemen laboratorium oleh Aslab, pengelolaan sesi oleh Asprak, perhitungan keterlambatan dan denda, pembayaran denda melalui Midtrans Sandbox, notifikasi pembayaran, serta finalisasi UI.
+
+## Pembagian SRS/Fitur
+
+Format: **Nama Programmer - SRS kode : user story**
+
+### Programmer 1 — Backend, Firebase, Payment Gateway, dan Security
+
+- **Programmer 1 - US-28** : Sistem mendukung role `aslab` dan `asprak` dengan hak akses yang berbeda serta tetap kompatibel dengan akun `asisten` lama.
+- **Programmer 1 - US-29** : Aslab dapat mengelola data laboratorium yang mencakup mata kuliah, nama, lokasi, koordinat, radius presensi, grace period, dan nominal denda.
+- **Programmer 1 - US-30** : Sistem menyimpan distribusi praktikan dan asprak pada laboratorium melalui assignment yang aman dan idempotent.
+- **Programmer 1 - US-31** : Sistem menghitung status tepat waktu atau terlambat berdasarkan waktu mulai sesi dan grace period yang dikonfigurasi.
+- **Programmer 1 - US-32** : Sistem membuat paling banyak satu tagihan untuk setiap kejadian keterlambatan berdasarkan kombinasi sesi dan praktikan.
+- **Programmer 1 - US-33** : Sistem menghubungkan tagihan dengan praktikan, sesi, catatan presensi, durasi keterlambatan, nominal, dan status tagihan.
+- **Programmer 1 - US-34** : Persetujuan izin menghasilkan status tidak hadir dengan izin dan membebaskan praktikan dari denda keterlambatan tanpa mengubah presensi menjadi hadir.
+- **Programmer 1 - US-35** : Backend membuat transaksi Midtrans Sandbox melalui alur client–server–payment gateway tanpa membocorkan Server Key ke aplikasi React Native.
+- **Programmer 1 - US-36** : Backend memverifikasi callback/webhook Midtrans, memperbarui status transaksi secara idempotent, dan tidak menerima status sukses hanya dari client.
+- **Programmer 1 - US-37** : Sistem menyimpan riwayat tagihan dan transaksi pembayaran secara persisten di Firestore.
+- **Programmer 1 - US-38** : Sistem mengirim notifikasi ketika tagihan dibuat, pembayaran berhasil, pembayaran gagal, atau pembayaran membutuhkan penyelesaian lanjutan.
+- **Programmer 1 - US-39** : Firebase Security Rules dan backend authorization membatasi data laboratorium, assignment, tagihan, transaksi, dan webhook sesuai role serta kepemilikan data.
+- **Programmer 1 - US-40** : Sistem menyediakan service dan kontrak validasi untuk tiga jenis bulk insert yang terpisah: laboratorium, praktikan, dan asprak.
+
+### Programmer 2 — UI, Role Workflow, dan Finalisasi Design System
+
+- **Programmer 2 - US-41** : Aslab dapat melihat dashboard jumlah laboratorium dan praktikan serta status kegiatan di seluruh laboratorium yang dikelolanya.
+- **Programmer 2 - US-42** : Dashboard Aslab menampilkan lokasi, waktu, jadwal aktif, jadwal mendatang, riwayat kegiatan, dan riwayat keuangan denda dengan filter hari, minggu, dan bulan.
+- **Programmer 2 - US-43** : Aslab dapat melakukan single/bulk insert laboratorium berdasarkan satu mata kuliah menggunakan template yang dapat diunduh.
+- **Programmer 2 - US-44** : Aslab dapat melakukan single/bulk insert praktikan ke laboratorium tertentu menggunakan template khusus praktikan.
+- **Programmer 2 - US-45** : Aslab dapat melakukan single/bulk insert asprak ke laboratorium tertentu menggunakan template khusus asprak.
+- **Programmer 2 - US-46** : Aslab dapat meninjau hasil bulk insert dalam daftar scrollable per baris dan dapat menerima, menolak, mengubah, atau melengkapi data sebelum commit.
+- **Programmer 2 - US-47** : Aslab dapat memindahkan praktikan dan asprak antar laboratorium tanpa memindahkan atau mengubah jadwal praktikum.
+- **Programmer 2 - US-48** : Asprak dapat melihat kelas, laboratorium, jadwal, dan sesi yang menjadi tanggung jawabnya secara real-time.
+- **Programmer 2 - US-49** : Asprak dapat membuka sesi, memantau presensi, melihat status keterlambatan, meninjau izin, dan menutup sesi yang menjadi tanggung jawabnya.
+- **Programmer 2 - US-50** : Asprak tidak dapat mengakses pengelolaan distribusi praktikan, distribusi asprak, atau konfigurasi seluruh laboratorium.
+- **Programmer 2 - US-51** : Praktikan dapat melihat daftar tagihan denda beserta rincian sesi, tanggal, alasan, nominal, dan status pembayaran.
+- **Programmer 2 - US-52** : Praktikan dapat memulai pembayaran tagihan melalui halaman atau metode pembayaran Midtrans Sandbox yang disediakan backend.
+- **Programmer 2 - US-53** : Praktikan dapat melihat status pembayaran `pending`, `success`, atau `failed` berdasarkan hasil verifikasi backend.
+- **Programmer 2 - US-54** : Praktikan dapat melihat riwayat transaksi pembayaran yang tetap tersedia setelah aplikasi ditutup dan dibuka kembali.
+- **Programmer 2 - US-55** : Seluruh layar Sprint 4 memiliki tampilan konsisten, modern, responsif, serta menangani loading, empty, error, unauthorized, disabled, dan retry state.
+
+## Pembagian file Sprint 4
+
+### Programmer 1
+
+- `src/types/sprint4.ts`
+- `src/services/sprint4/**`
+- `src/context/BillingContext.tsx`
+- `src/context/LaboratoryManagementContext.tsx`
+- `server/**` atau backend Midtrans terpisah
+- `functions/**` jika digunakan
+- `firestore.rules`
+- `firestore.indexes.json`
+
+### Programmer 2
+
+- `src/app/auth/**`
+- `src/app/aslab/**`
+- `src/app/asprak/**`
+- `src/app/praktikan/tagihan.tsx`
+- `src/app/praktikan/pembayaran/**`
+- `src/app/praktikan/pembayaran-riwayat.tsx`
+- `src/components/shared/**`
+- `src/components/aslab/**`
+- `src/components/asprak/**`
+- `src/components/praktikan/billing/**`
+- `src/theme/**`
+
+Kedua programmer mulai dari commit yang sama dan dapat bekerja paralel. Programmer 2 menggunakan loading/error boundary atau adapter lokal ketika service Programmer 1 belum tersedia; tidak ada pekerjaan yang mengharuskan salah satu programmer menunggu programmer lainnya.
