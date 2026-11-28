@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
@@ -6,6 +6,7 @@ import { useAttendance } from '../../context/AttendanceContext';
 import { PracticumClass, PracticumSession } from '../../types/attendance';
 import { normalizeClassName } from '../../utils/classNames';
 import { Laboratory } from '../../types/notification';
+import { requestLocation } from '../../services/location';
 import { colors } from '../../theme/tokens';
 
 type TabKey = 'sessions' | 'classes' | 'participants' | 'laboratories';
@@ -28,6 +29,27 @@ function isValidISODate(value: string): boolean {
 }
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+const MONTH_NAMES = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
+const DAY_HEADERS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+const MINUTE_OPTIONS = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
+
+function formatISODate(year: number, monthIndex: number, day: number): string {
+  return `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function getCalendarCells(year: number, monthIndex: number): (number | null)[] {
+  const firstDayOfWeek = new Date(year, monthIndex, 1).getDay();
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDayOfWeek; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+  return cells;
+}
 
 function timeToMinutes(value: string): number {
   const [hours, minutes] = value.split(':').map(Number);
@@ -47,6 +69,7 @@ function shiftTime(value: string, offsetMinutes: number): string {
 
 export default function ManagePracticumScreen() {
   const router = useRouter();
+  const scrollViewRef = useRef<ScrollView>(null);
   const { authUser } = useAuth();
   const {
     sessions, classes, participants, students, addSession, updateSession,
@@ -89,6 +112,70 @@ export default function ManagePracticumScreen() {
   const [room, setRoom] = useState<string>('Lab Dasar 2');
   const [selectedLabId, setSelectedLabId] = useState<string | null>(null);
 
+  // Date & Time Picker modal state
+  const [datePickerOpen, setDatePickerOpen] = useState<boolean>(false);
+  const [calendarYear, setCalendarYear] = useState<number>(() => new Date().getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState<number>(() => new Date().getMonth());
+  const [timePickerTarget, setTimePickerTarget] = useState<'start' | 'end' | null>(null);
+  const [tempHour, setTempHour] = useState<string>('08');
+  const [tempMinute, setTempMinute] = useState<string>('00');
+
+  const openDatePicker = () => {
+    if (isValidISODate(date)) {
+      const [y, m] = date.split('-').map(Number);
+      setCalendarYear(y);
+      setCalendarMonth(m - 1);
+    } else {
+      const now = new Date();
+      setCalendarYear(now.getFullYear());
+      setCalendarMonth(now.getMonth());
+    }
+    setDatePickerOpen(true);
+  };
+
+  const shiftCalendarMonth = (delta: number) => {
+    const next = new Date(calendarYear, calendarMonth + delta, 1);
+    setCalendarYear(next.getFullYear());
+    setCalendarMonth(next.getMonth());
+  };
+
+  const openTimePicker = (target: 'start' | 'end') => {
+    const current = target === 'start' ? startTime : endTime;
+    if (TIME_PATTERN.test(current)) {
+      const [h, m] = current.split(':');
+      setTempHour(h);
+      setTempMinute(m);
+    } else {
+      const now = new Date();
+      setTempHour(String(now.getHours()).padStart(2, '0'));
+      setTempMinute(String(Math.floor(now.getMinutes() / 5) * 5).padStart(2, '0'));
+    }
+    setTimePickerTarget(target);
+  };
+
+  const confirmTimePicker = (hourStr: string, minuteStr: string) => {
+    const formatted = `${hourStr}:${minuteStr}`;
+    if (timePickerTarget === 'start') {
+      handleStartTimeChange(formatted);
+    } else if (timePickerTarget === 'end') {
+      handleEndTimeChange(formatted);
+    }
+    setTimePickerTarget(null);
+  };
+
+  const applyCurrentTimeNow = () => {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const formatted = `${h}:${m}`;
+    if (timePickerTarget === 'start') {
+      handleStartTimeChange(formatted);
+    } else if (timePickerTarget === 'end') {
+      handleEndTimeChange(formatted);
+    }
+    setTimePickerTarget(null);
+  };
+
   // Class form state
   const [newClassName, setNewClassName] = useState<string>('');
 
@@ -105,10 +192,34 @@ export default function ManagePracticumScreen() {
   const [labLatitude, setLabLatitude] = useState('');
   const [labLongitude, setLabLongitude] = useState('');
   const [labRadius, setLabRadius] = useState('50');
+  const [locatingLab, setLocatingLab] = useState(false);
+  const [labLocationMessage, setLabLocationMessage] = useState<string | null>(null);
 
   const selectedClass = classes.find((c) => c.name === className || c.id === className) ?? null;
   const selectedParticipantClass = classes.find((c) => c.name === selectedClassId) ?? null;
   const selectedLab = laboratories.find((l) => l.id === selectedLabId) ?? null;
+
+  const handleUseCurrentLocation = async () => {
+    setLocatingLab(true);
+    setLabLocationMessage(null);
+    try {
+      const coords = await requestLocation();
+      setLabLatitude(coords.latitude.toFixed(6));
+      setLabLongitude(coords.longitude.toFixed(6));
+      setLabLocationMessage('Koordinat berhasil diambil dari GPS perangkat.');
+    } catch (err) {
+      const code = err instanceof Error ? err.message : 'location-unavailable';
+      if (code === 'permission-denied') {
+        setLabLocationMessage('Izin lokasi ditolak. Aktifkan izin lokasi di pengaturan HP.');
+      } else if (code === 'location-disabled') {
+        setLabLocationMessage('Layanan lokasi (GPS) perangkat sedang mati.');
+      } else {
+        setLabLocationMessage('Lokasi perangkat belum tersedia. Coba lagi atau isi manual.');
+      }
+    } finally {
+      setLocatingLab(false);
+    }
+  };
 
   const openLabModal = (laboratoryId: string | null) => {
     setEditingLabId(laboratoryId);
@@ -118,7 +229,11 @@ export default function ManagePracticumScreen() {
     setLabLatitude(laboratory ? String(laboratory.latitude) : '');
     setLabLongitude(laboratory ? String(laboratory.longitude) : '');
     setLabRadius(laboratory ? String(laboratory.radiusMeters) : '50');
+    setLabLocationMessage(null);
     setLabModalVisible(true);
+    if (!laboratory) {
+      void handleUseCurrentLocation();
+    }
   };
 
   const saveLaboratory = async () => {
@@ -185,6 +300,7 @@ export default function ManagePracticumScreen() {
     setEndTime(s.endTime);
     setRoom(s.room ?? '');
     setSelectedLabId(s.labId ?? laboratories.find((lab) => lab.room === s.room)?.id ?? null);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   const handleSaveSession = async () => {
@@ -225,7 +341,24 @@ export default function ManagePracticumScreen() {
     try {
       const classParticipants = participants.filter((p) => p.classId === classDoc.id || p.classId === classDoc.name).map((p) => p.studentId);
       if (editingSessionId) {
-        await updateSession(editingSessionId, { practicalName: nextPracticalName, className: canonicalClassName, date: nextDate, startTime: nextStartTime, endTime: nextEndTime, room: selectedLab?.room ?? nextRoom, labId: selectedLabId ?? undefined, participantIds: classParticipants });
+        const existingSession = sessions.find((item) => item.id === editingSessionId);
+        const scheduleChanged =
+          existingSession &&
+          (existingSession.date !== nextDate ||
+            existingSession.startTime !== nextStartTime ||
+            existingSession.endTime !== nextEndTime);
+        const shouldResetStatus = existingSession?.status === 'closed' && scheduleChanged;
+        await updateSession(editingSessionId, {
+          practicalName: nextPracticalName,
+          className: canonicalClassName,
+          date: nextDate,
+          startTime: nextStartTime,
+          endTime: nextEndTime,
+          room: selectedLab?.room ?? nextRoom,
+          labId: selectedLabId ?? undefined,
+          participantIds: classParticipants,
+          ...(shouldResetStatus ? { status: 'upcoming' as const } : {}),
+        });
         showFeedback('sessions', 'Sesi berhasil diperbarui.', 'success');
       } else {
         await addSession({ practicalName: nextPracticalName, className: canonicalClassName, date: nextDate, startTime: nextStartTime, endTime: nextEndTime, room: selectedLab?.room ?? nextRoom, labId: selectedLabId ?? undefined, assistantId: authUser?.uid, assistantName: authUser?.name, participantIds: classParticipants });
@@ -329,7 +462,7 @@ export default function ManagePracticumScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollViewRef} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.container}>
           <View style={styles.tabsRow}>
             <Pressable onPress={() => handleTabChange('sessions')} style={[styles.tabBtn, activeTab === 'sessions' && styles.tabBtnActive]}>
@@ -367,18 +500,27 @@ export default function ManagePracticumScreen() {
                     {classes.length === 0 ? <Text style={styles.classWarning}>Belum ada kelas. Tambahkan kelas di tab Kelas.</Text> : editingSessionId && className && !selectedClass ? <Text style={styles.classError}>Kelas sesi ini tidak lagi tersedia. Pilih kelas lain.</Text> : null}
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.label}>Tanggal (YYYY-MM-DD)<Text style={styles.requiredMark}> *</Text></Text>
-                    <TextInput value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" placeholderTextColor="#94A3B8" maxLength={10} style={styles.input} />
+                    <Text style={styles.label}>Tanggal<Text style={styles.requiredMark}> *</Text></Text>
+                    <Pressable onPress={openDatePicker} style={styles.classSelect}>
+                      <Text style={[styles.classSelectText, !date && styles.classSelectPlaceholder]}>{date || 'Pilih tanggal'}</Text>
+                      <Text style={styles.classSelectAction}>Pilih</Text>
+                    </Pressable>
                   </View>
                 </View>
                 <View style={styles.row}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>Jam Mulai<Text style={styles.requiredMark}> *</Text></Text>
-                    <TextInput value={startTime} onChangeText={handleStartTimeChange} placeholder="08:00" placeholderTextColor="#94A3B8" maxLength={5} style={styles.input} />
+                    <Pressable onPress={() => openTimePicker('start')} style={styles.classSelect}>
+                      <Text style={[styles.classSelectText, !startTime && styles.classSelectPlaceholder]}>{startTime || '08:00'}</Text>
+                      <Text style={styles.classSelectAction}>Pilih</Text>
+                    </Pressable>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>Jam Selesai<Text style={styles.requiredMark}> *</Text></Text>
-                    <TextInput value={endTime} onChangeText={handleEndTimeChange} placeholder="10:00" placeholderTextColor="#94A3B8" maxLength={5} style={styles.input} />
+                    <Pressable onPress={() => openTimePicker('end')} style={styles.classSelect}>
+                      <Text style={[styles.classSelectText, !endTime && styles.classSelectPlaceholder]}>{endTime || '10:00'}</Text>
+                      <Text style={styles.classSelectAction}>Pilih</Text>
+                    </Pressable>
                   </View>
                 </View>
                 <Text style={styles.label}>Ruangan<Text style={styles.requiredMark}> *</Text></Text>
@@ -599,22 +741,182 @@ export default function ManagePracticumScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{editingLabId ? 'Ubah Laboratorium' : 'Tambah Laboratorium'}</Text>
-            <Text style={styles.label}>Nama Laboratorium</Text>
-            <TextInput value={labName} onChangeText={setLabName} placeholder="Contoh: Laboratorium Dasar 2" style={styles.input} />
-            <Text style={styles.label}>Ruangan</Text>
-            <TextInput value={labRoom} onChangeText={setLabRoom} placeholder="Contoh: Lab Dasar 2" style={styles.input} />
-            <Text style={styles.label}>Latitude</Text>
-            <TextInput value={labLatitude} onChangeText={setLabLatitude} placeholder="Contoh: -6.9271" keyboardType="numeric" style={styles.input} />
-            <Text style={styles.label}>Longitude</Text>
-            <TextInput value={labLongitude} onChangeText={setLabLongitude} placeholder="Contoh: 110.4182" keyboardType="numeric" style={styles.input} />
-            <Text style={styles.label}>Radius (meter)</Text>
-            <TextInput value={labRadius} onChangeText={setLabRadius} placeholder="Contoh: 50" keyboardType="numeric" style={styles.input} />
-            <View style={styles.buttonRow}>
-              <Pressable onPress={() => setLabModalVisible(false)} style={styles.secondaryBtn}><Text style={styles.secondaryBtnText}>Batal</Text></Pressable>
-              <Pressable onPress={saveLaboratory} style={[styles.primaryBtn, { flex: 1 }]} disabled={busy}>
-                {busy ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.primaryBtnText}>Simpan</Text>}
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <Text style={styles.label}>Nama Laboratorium</Text>
+              <TextInput value={labName} onChangeText={setLabName} placeholder="Contoh: Laboratorium Dasar 2" style={styles.input} />
+              <Text style={styles.label}>Ruangan</Text>
+              <TextInput value={labRoom} onChangeText={setLabRoom} placeholder="Contoh: Lab Dasar 2" style={styles.input} />
+              <Pressable
+                onPress={handleUseCurrentLocation}
+                disabled={locatingLab || busy}
+                style={[styles.secondaryBtn, { marginBottom: 10 }]}
+              >
+                {locatingLab ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <ActivityIndicator color={colors.ink} size="small" />
+                    <Text style={styles.secondaryBtnText}>Mengambil lokasi GPS...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.secondaryBtnText}>📍 Gunakan Lokasi HP Saat Ini</Text>
+                )}
+              </Pressable>
+              {labLocationMessage ? (
+                <Text style={styles.inputHint}>{labLocationMessage}</Text>
+              ) : null}
+              <Text style={styles.label}>Latitude</Text>
+              <TextInput value={labLatitude} onChangeText={setLabLatitude} placeholder="Contoh: -6.9271" keyboardType="numbers-and-punctuation" style={styles.input} />
+              <Text style={styles.label}>Longitude</Text>
+              <TextInput value={labLongitude} onChangeText={setLabLongitude} placeholder="Contoh: 110.4182" keyboardType="numbers-and-punctuation" style={styles.input} />
+              <Text style={styles.label}>Radius (meter)</Text>
+              <TextInput value={labRadius} onChangeText={setLabRadius} placeholder="Contoh: 50" keyboardType="numeric" style={styles.input} />
+              <View style={styles.buttonRow}>
+                <Pressable onPress={() => setLabModalVisible(false)} style={styles.secondaryBtn}><Text style={styles.secondaryBtnText}>Batal</Text></Pressable>
+                <Pressable onPress={saveLaboratory} style={[styles.primaryBtn, { flex: 1 }]} disabled={busy}>
+                  {busy ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.primaryBtnText}>Simpan</Text>}
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={datePickerOpen} transparent animationType="fade" onRequestClose={() => setDatePickerOpen(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Pilih Tanggal Sesi</Text>
+            <View style={styles.calendarHeader}>
+              <Pressable onPress={() => shiftCalendarMonth(-1)} style={styles.calendarNavBtn}>
+                <Text style={styles.calendarNavText}>‹</Text>
+              </Pressable>
+              <Text style={styles.calendarMonthTitle}>
+                {MONTH_NAMES[calendarMonth]} {calendarYear}
+              </Text>
+              <Pressable onPress={() => shiftCalendarMonth(1)} style={styles.calendarNavBtn}>
+                <Text style={styles.calendarNavText}>›</Text>
               </Pressable>
             </View>
+            <View style={styles.calendarRow}>
+              {DAY_HEADERS.map((d) => (
+                <Text key={d} style={styles.calendarDayHeader}>{d}</Text>
+              ))}
+            </View>
+            <View style={styles.calendarGrid}>
+              {getCalendarCells(calendarYear, calendarMonth).map((dayNum, idx) => {
+                if (!dayNum) {
+                  return <View key={`empty-${idx}`} style={styles.calendarCell} />;
+                }
+                const iso = formatISODate(calendarYear, calendarMonth, dayNum);
+                const todayIso = getTodayDateString();
+                const isPast = iso < todayIso;
+                const isSelected = iso === date;
+                const isToday = iso === todayIso;
+                return (
+                  <Pressable
+                    key={iso}
+                    disabled={isPast}
+                    onPress={() => {
+                      setDate(iso);
+                      setDatePickerOpen(false);
+                    }}
+                    style={[
+                      styles.calendarCell,
+                      isToday && styles.calendarCellToday,
+                      isSelected && styles.calendarCellSelected,
+                      isPast && styles.calendarCellDisabled,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.calendarCellText,
+                        isSelected && styles.calendarCellTextSelected,
+                        isPast && styles.calendarCellTextDisabled,
+                      ]}
+                    >
+                      {dayNum}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <View style={styles.buttonRow}>
+              <Pressable
+                onPress={() => {
+                  const todayIso = getTodayDateString();
+                  setDate(todayIso);
+                  setDatePickerOpen(false);
+                }}
+                style={[styles.primaryBtn, { flex: 1 }]}
+              >
+                <Text style={styles.primaryBtnText}>Hari Ini</Text>
+              </Pressable>
+              <Pressable onPress={() => setDatePickerOpen(false)} style={styles.secondaryBtn}>
+                <Text style={styles.secondaryBtnText}>Tutup</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={timePickerTarget !== null} transparent animationType="fade" onRequestClose={() => setTimePickerTarget(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>
+              {timePickerTarget === 'start' ? 'Pilih Jam Mulai' : 'Pilih Jam Selesai'}
+            </Text>
+            <Text style={styles.inputHint}>
+              Durasi otomatis disesuaikan 2 jam ({timePickerTarget === 'start' ? 'Jam Selesai' : 'Jam Mulai'} ikut berubah).
+            </Text>
+            <View style={styles.timeColumnsRow}>
+              <View style={styles.timeColumn}>
+                <Text style={styles.timeColumnLabel}>Jam</Text>
+                <ScrollView style={styles.timeList} showsVerticalScrollIndicator={false}>
+                  {HOUR_OPTIONS.map((h) => {
+                    const active = tempHour === h;
+                    return (
+                      <Pressable
+                        key={h}
+                        onPress={() => setTempHour(h)}
+                        style={[styles.timeOption, active && styles.timeOptionActive]}
+                      >
+                        <Text style={[styles.timeOptionText, active && styles.timeOptionTextActive]}>{h}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+              <Text style={styles.timeColon}>:</Text>
+              <View style={styles.timeColumn}>
+                <Text style={styles.timeColumnLabel}>Menit</Text>
+                <ScrollView style={styles.timeList} showsVerticalScrollIndicator={false}>
+                  {MINUTE_OPTIONS.map((m) => {
+                    const active = tempMinute === m;
+                    return (
+                      <Pressable
+                        key={m}
+                        onPress={() => setTempMinute(m)}
+                        style={[styles.timeOption, active && styles.timeOptionActive]}
+                      >
+                        <Text style={[styles.timeOptionText, active && styles.timeOptionTextActive]}>{m}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            </View>
+            <View style={styles.buttonRow}>
+              <Pressable onPress={applyCurrentTimeNow} style={styles.secondaryBtn}>
+                <Text style={styles.secondaryBtnText}>Sekarang</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => confirmTimePicker(tempHour, tempMinute)}
+                style={[styles.primaryBtn, { flex: 1 }]}
+              >
+                <Text style={styles.primaryBtnText}>Pilih ({tempHour}:{tempMinute})</Text>
+              </Pressable>
+            </View>
+            <Pressable onPress={() => setTimePickerTarget(null)} style={styles.secondaryBtn}>
+              <Text style={styles.secondaryBtnText}>Batal</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -748,4 +1050,27 @@ const styles = StyleSheet.create({
   quickPickRow: { flexDirection: 'row', gap: 6 },
   quickPickChip: { backgroundColor: colors.sage, borderWidth: 1, borderColor: colors.sage, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
   quickPickChipText: { fontSize: 12, color: colors.ink, fontWeight: '500' },
+  calendarHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  calendarNavBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.sage, alignItems: 'center', justifyContent: 'center' },
+  calendarNavText: { fontSize: 18, fontWeight: '700', color: colors.ink },
+  calendarMonthTitle: { fontSize: 15, fontWeight: '700', color: colors.ink },
+  calendarRow: { flexDirection: 'row', marginBottom: 4 },
+  calendarDayHeader: { width: '14.28%', textAlign: 'center', fontSize: 11, fontWeight: '600', color: colors.muted },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  calendarCell: { width: '14.28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 999 },
+  calendarCellToday: { borderWidth: 1, borderColor: colors.yellow },
+  calendarCellSelected: { backgroundColor: colors.yellow },
+  calendarCellDisabled: { opacity: 0.3 },
+  calendarCellText: { fontSize: 13, fontWeight: '600', color: colors.ink },
+  calendarCellTextSelected: { color: colors.ink, fontWeight: '700' },
+  calendarCellTextDisabled: { color: colors.muted },
+  timeColumnsRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 4 },
+  timeColumn: { flex: 1 },
+  timeColumnLabel: { fontSize: 12, fontWeight: '600', color: colors.muted, textAlign: 'center', marginBottom: 6 },
+  timeList: { maxHeight: 200, borderWidth: 1, borderColor: colors.border, borderRadius: 16, backgroundColor: colors.canvas },
+  timeOption: { paddingVertical: 10, alignItems: 'center', borderRadius: 12, marginHorizontal: 6, marginVertical: 2 },
+  timeOptionActive: { backgroundColor: colors.yellow },
+  timeOptionText: { fontSize: 15, fontWeight: '600', color: colors.ink },
+  timeOptionTextActive: { fontWeight: '700', color: colors.ink },
+  timeColon: { fontSize: 22, fontWeight: '700', color: colors.ink, marginTop: 18 },
 });

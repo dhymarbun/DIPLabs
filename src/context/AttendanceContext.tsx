@@ -248,30 +248,32 @@ export function AttendanceProvider({
         }, () => undefined)
       : () => undefined;
 
-    const unsubLaboratories = authUser.role === 'asisten'
-      ? onSnapshot(collection(db, 'laboratories'), (snapshot) => {
-          setLaboratories(snapshot.docs.map((docSnap) => {
-            const d = docSnap.data();
-            return {
-              id: docSnap.id,
-              name: String(d.name ?? ''),
-              room: String(d.room ?? ''),
-              description: d.description ? String(d.description) : undefined,
-              latitude: typeof d.latitude === 'number' ? d.latitude : Number(d.latitude ?? 0),
-              longitude: typeof d.longitude === 'number' ? d.longitude : Number(d.longitude ?? 0),
-              radiusMeters:
-                typeof d.radiusMeters === 'number' ? d.radiusMeters : Number(d.radiusMeters ?? 0),
-              updatedAt: String(d.updatedAt ?? ''),
-            };
-          }));
-          setLaboratoriesLoading(false);
-        }, (err) => {
-          setAttendanceError(
-            err.message || 'Gagal memuat data laboratorium dari Firestore.'
-          );
-          setLaboratoriesLoading(false);
-        })
-      : () => undefined;
+    const unsubLaboratories = onSnapshot(
+      collection(db, 'laboratories'),
+      (snapshot) => {
+        setLaboratories(snapshot.docs.map((docSnap) => {
+          const d = docSnap.data();
+          return {
+            id: docSnap.id,
+            name: String(d.name ?? ''),
+            room: String(d.room ?? ''),
+            description: d.description ? String(d.description) : undefined,
+            latitude: typeof d.latitude === 'number' ? d.latitude : Number(d.latitude ?? 0),
+            longitude: typeof d.longitude === 'number' ? d.longitude : Number(d.longitude ?? 0),
+            radiusMeters:
+              typeof d.radiusMeters === 'number' ? d.radiusMeters : Number(d.radiusMeters ?? 0),
+            updatedAt: String(d.updatedAt ?? ''),
+          };
+        }));
+        setLaboratoriesLoading(false);
+      },
+      (err) => {
+        setAttendanceError(
+          err.message || 'Gagal memuat data laboratorium dari Firestore.'
+        );
+        setLaboratoriesLoading(false);
+      }
+    );
 
     const unsubUsers = authUser.role === 'asisten'
       ? onSnapshot(query(collection(db, 'users'), where('role', '==', 'praktikan')), (snapshot) => {

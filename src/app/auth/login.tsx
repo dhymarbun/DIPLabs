@@ -20,6 +20,7 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -108,18 +109,30 @@ export default function LoginScreen() {
               <Text style={styles.label}>
                 Password<Text style={styles.requiredMark}> *</Text>
               </Text>
-              <TextInput
-                value={password}
-                onChangeText={(val) => {
-                  setPassword(val);
-                  if (errorMessage) setErrorMessage(null);
-                }}
-                placeholder="Masukkan kata sandi"
-                placeholderTextColor="#94A3B8"
-                secureTextEntry
-                editable={!submitting}
-                style={styles.input}
-              />
+              <View style={styles.passwordRow}>
+                <TextInput
+                  value={password}
+                  onChangeText={(val) => {
+                    setPassword(val);
+                    if (errorMessage) setErrorMessage(null);
+                  }}
+                  placeholder="Masukkan kata sandi"
+                  placeholderTextColor="#94A3B8"
+                  secureTextEntry={!showPassword}
+                  editable={!submitting}
+                  style={styles.passwordInput}
+                />
+                <Pressable
+                  onPress={() => setShowPassword((prev) => !prev)}
+                  disabled={submitting}
+                  hitSlop={8}
+                  style={styles.eyeBtn}
+                >
+                  <Text style={styles.eyeText}>
+                    {showPassword ? 'Sembunyi' : 'Lihat'}
+                  </Text>
+                </Pressable>
+              </View>
             </View>
 
             {errorMessage ? (
@@ -241,6 +254,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#232420',
     backgroundColor: '#FFFFFF',
+  },
+  passwordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    paddingRight: 10,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#232420',
+  },
+  eyeBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  eyeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#5E5F58',
   },
   errorBox: {
     backgroundColor: '#FEF2F2',

@@ -25,6 +25,7 @@ export default function RegisterScreen() {
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [nim, setNim] = useState<string>('');
   const [className, setClassName] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -152,15 +153,27 @@ export default function RegisterScreen() {
               <Text style={styles.label}>
                 Password<Text style={styles.requiredMark}> *</Text>
               </Text>
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Minimal 6 karakter"
-                placeholderTextColor="#94A3B8"
-                secureTextEntry
-                editable={!submitting}
-                style={styles.input}
-              />
+              <View style={styles.passwordRow}>
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Minimal 6 karakter"
+                  placeholderTextColor="#94A3B8"
+                  secureTextEntry={!showPassword}
+                  editable={!submitting}
+                  style={styles.passwordInput}
+                />
+                <Pressable
+                  onPress={() => setShowPassword((prev) => !prev)}
+                  disabled={submitting}
+                  hitSlop={8}
+                  style={styles.eyeBtn}
+                >
+                  <Text style={styles.eyeText}>
+                    {showPassword ? 'Sembunyi' : 'Lihat'}
+                  </Text>
+                </Pressable>
+              </View>
             </View>
 
             <View style={styles.rowFields}>
@@ -508,6 +521,29 @@ const styles = StyleSheet.create({
     color: '#232420',
   },
   caption: { marginTop: 16, color: '#5E5F58', fontSize: 11 },
+  passwordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    paddingRight: 10,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#232420',
+  },
+  eyeBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  eyeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#5E5F58',
+  },
   pressed: {
     opacity: 0.85,
   },

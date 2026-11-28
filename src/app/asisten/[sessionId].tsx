@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -45,6 +45,12 @@ export default function AsistenSessionDetailScreen() {
     tone: 'success' | 'error';
     text: string;
   } | null>(null);
+  const [now, setNow] = useState<Date>(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 15000);
+    return () => clearInterval(timer);
+  }, []);
 
   const session = useMemo(
     () => sessions.find((s) => s.id === sessionId),
@@ -87,8 +93,8 @@ export default function AsistenSessionDetailScreen() {
 
   const totalParticipants = session.participantIds?.length ?? 0;
 
-  const scheduleStatus = getScheduleStatus(session);
-  const scheduleMessage = getScheduleMessage(session);
+  const scheduleStatus = getScheduleStatus(session, now);
+  const scheduleMessage = getScheduleMessage(session, now);
   const canOpenBySchedule = scheduleStatus === 'within' && session.status === 'upcoming';
 
   const handleConfirmAction = async () => {

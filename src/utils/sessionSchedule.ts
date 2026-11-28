@@ -6,8 +6,31 @@ export function getSessionScheduleBounds(session: PracticumSession): {
   start: Date;
   end: Date;
 } {
-  const startDate = new Date(`${session.date}T${session.startTime}:00`);
-  const endDate = new Date(`${session.date}T${session.endTime}:00`);
+  const [year, month, day] = session.date.split('-').map(Number);
+  const [startHour, startMin] = session.startTime.split(':').map(Number);
+  const [endHour, endMin] = session.endTime.split(':').map(Number);
+
+  const startDate = new Date(
+    year,
+    (month || 1) - 1,
+    day || 1,
+    startHour || 0,
+    startMin || 0,
+    0,
+    0
+  );
+  const endDate = new Date(
+    year,
+    (month || 1) - 1,
+    day || 1,
+    endHour || 0,
+    endMin || 0,
+    0,
+    0
+  );
+  if (endDate <= startDate) {
+    endDate.setDate(endDate.getDate() + 1);
+  }
   return { start: startDate, end: endDate };
 }
 

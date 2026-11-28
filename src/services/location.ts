@@ -31,7 +31,20 @@ export function requestLocation(): Promise<GeoCoordinates> {
     if (status !== ExpoLocation.PermissionStatus.GRANTED) throw new Error('permission-denied');
     const enabled = await ExpoLocation.hasServicesEnabledAsync();
     if (!enabled) throw new Error('location-disabled');
-    const position = await ExpoLocation.getCurrentPositionAsync({ accuracy: ExpoLocation.Accuracy.High });
+
+    const lastKnown = await ExpoLocation.getLastKnownPositionAsync({
+      maxAge: 30000,
+    });
+    if (lastKnown) {
+      return {
+        latitude: lastKnown.coords.latitude,
+        longitude: lastKnown.coords.longitude,
+      };
+    }
+
+    const position = await ExpoLocation.getCurrentPositionAsync({
+      accuracy: ExpoLocation.Accuracy.Balanced,
+    });
     return { latitude: position.coords.latitude, longitude: position.coords.longitude };
   });
 }
@@ -58,7 +71,7 @@ export function watchDeviceLocation(
       if (status !== ExpoLocation.PermissionStatus.GRANTED) return onError?.('denied');
       if (!(await ExpoLocation.hasServicesEnabledAsync())) return onError?.('unavailable');
       subscription = await ExpoLocation.watchPositionAsync(
-        { accuracy: ExpoLocation.Accuracy.High, distanceInterval: 5 },
+        { accuracy: ExpoLocation.Accuracy.Balanced, distanceInterval: 5 },
         (position) => {
           if (!cancelled) onLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude });
         },
